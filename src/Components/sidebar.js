@@ -1,7 +1,5 @@
 "use client";
 import { useApp } from "@/Components/store";
-import Image from "next/image";
-import Link from "next/link";
 
 const ITEMS = [
   {
@@ -9,12 +7,12 @@ const ITEMS = [
     label: "Today",
     icon: (
       <svg
-        width="16"
-        height="16"
+        width="15"
+        height="15"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -24,16 +22,55 @@ const ITEMS = [
     ),
   },
   {
-    id: "progress",
-    label: "Progress",
+    id: "exams",
+    label: "Exam Countdown",
     icon: (
       <svg
-        width="16"
-        height="16"
+        width="15"
+        height="15"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+      </svg>
+    ),
+  },
+  {
+    id: "attendance",
+    label: "Attendance",
+    icon: (
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+      </svg>
+    ),
+  },
+  {
+    id: "progress",
+    label: "Analytics",
+    icon: (
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -46,12 +83,12 @@ const ITEMS = [
     label: "Settings",
     icon: (
       <svg
-        width="16"
-        height="16"
+        width="15"
+        height="15"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -63,39 +100,37 @@ const ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { view, setView, progress, doneCount, tasks } = useApp();
+  const { view, setView, progress, doneCount, tasks, upcomingExams, sem } =
+    useApp();
+  const nextExam = upcomingExams[0];
+
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <Link
-        href="/"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          textDecoration: "none",
-          marginBottom:"10PX",
-        }}
-      >
-        {/* Logo Image */}
-        <Image
-          src="/logo.png"
-          alt="Daily Mark Logo"
-          width={150}
-          height={45}
-          priority
-          style={{ objectFit: "contain" }}
-        />
-      </Link>
+      <div style={{ padding: "2px 11px 18px" }}>
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: "var(--txt)",
+            letterSpacing: "-.02em",
+          }}
+        >
+          Daily MARK
+        </div>
+        <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 1 }}>
+          {sem}
+        </div>
+      </div>
 
-      {/* Mini progress */}
+      {/* Today quick stats */}
       <div
         style={{
-          padding: "14px",
-          background: "var(--bg-3)",
-          borderRadius: "12px",
-          marginBottom: "14px",
-          border: "1px solid var(--line)",
+          background: "var(--bg3)",
+          borderRadius: 12,
+          padding: 12,
+          marginBottom: 12,
+          border: "1px solid var(--border)",
         }}
       >
         <div
@@ -103,52 +138,100 @@ export default function Sidebar() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "baseline",
-            marginBottom: "10px",
+            marginBottom: 8,
           }}
         >
           <span
             style={{
-              fontSize: "11px",
-              fontWeight: 600,
-              letterSpacing: "0.07em",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".08em",
               textTransform: "uppercase",
-              color: "var(--txt-3)",
+              color: "var(--txt3)",
             }}
           >
             Today
           </span>
           <span
             style={{
-              fontSize: "22px",
-              fontWeight: 700,
+              fontSize: 20,
+              fontWeight: 800,
+              letterSpacing: "-.03em",
               color: "var(--txt)",
-              letterSpacing: "-0.03em",
             }}
           >
             {progress}%
           </span>
         </div>
-        <div className="prog-track">
-          <div className="prog-fill" style={{ width: `${progress}%` }} />
+        <div className="ptrack">
+          <div
+            className="pfill"
+            style={{ width: `${progress}%`, background: "var(--txt)" }}
+          />
         </div>
-        <div
-          style={{ fontSize: "12px", color: "var(--txt-3)", marginTop: "8px" }}
-        >
-          {doneCount} of {tasks.length} done
+        <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 6 }}>
+          {doneCount}/{tasks.length} tasks done
         </div>
       </div>
 
-      {/* Nav */}
-      {ITEMS.map((item) => (
-        <button
-          key={item.id}
-          className={`side-item ${view === item.id ? "active" : ""}`}
-          onClick={() => setView(item.id)}
+      {/* Next exam chip */}
+      {nextExam && (
+        <div
+          style={{
+            background: nextExam.daysLeft <= 3 ? "var(--red)18" : "var(--bg3)",
+            border: `1px solid ${nextExam.daysLeft <= 3 ? "var(--red)44" : "var(--border)"}`,
+            borderRadius: 10,
+            padding: "9px 11px",
+            marginBottom: 12,
+          }}
         >
-          {item.icon}
-          {item.label}
-        </button>
-      ))}
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".07em",
+              textTransform: "uppercase",
+              color: nextExam.daysLeft <= 3 ? "var(--red)" : "var(--txt3)",
+              marginBottom: 3,
+            }}
+          >
+            Next Exam
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--txt)" }}>
+            {nextExam.subject}
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: nextExam.daysLeft <= 3 ? "var(--red)" : "var(--txt2)",
+              marginTop: 1,
+              fontFamily: "var(--mono)",
+            }}
+          >
+            {nextExam.daysLeft === 0
+              ? "TODAY"
+              : nextExam.daysLeft === 1
+                ? "TOMORROW"
+                : `in ${nextExam.daysLeft} days`}
+          </div>
+        </div>
+      )}
+
+      {/* Nav */}
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}
+      >
+        {ITEMS.map((item) => (
+          <button
+            key={item.id}
+            className={`snav ${view === item.id ? "on" : ""}`}
+            onClick={() => setView(item.id)}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+      </div>
     </aside>
   );
 }

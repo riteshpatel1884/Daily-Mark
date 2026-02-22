@@ -7,12 +7,12 @@ const ITEMS = [
     label: "Today",
     icon: (
       <svg
-        width="20"
-        height="20"
+        width="19"
+        height="19"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -22,16 +22,55 @@ const ITEMS = [
     ),
   },
   {
-    id: "progress",
-    label: "Progress",
+    id: "exams",
+    label: "Exams",
     icon: (
       <svg
-        width="20"
-        height="20"
+        width="19"
+        height="19"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+      </svg>
+    ),
+  },
+  {
+    id: "attendance",
+    label: "Attend",
+    icon: (
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+      </svg>
+    ),
+  },
+  {
+    id: "progress",
+    label: "Stats",
+    icon: (
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -41,20 +80,21 @@ const ITEMS = [
   },
   {
     id: "settings",
-    label: "Settings",
+    label: "More",
     icon: (
       <svg
-        width="20"
-        height="20"
+        width="19"
+        height="19"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+        <circle cx="5" cy="12" r="1" />
       </svg>
     ),
   },
@@ -63,14 +103,14 @@ const ITEMS = [
 export default function BottomNav() {
   const { view, setView } = useApp();
   return (
-    <nav className="bottom-nav">
+    <nav className="bnav">
       {ITEMS.map((item) => (
         <button
           key={item.id}
-          className={`nav-btn ${view === item.id ? "active" : ""}`}
+          className={`bnav-btn ${view === item.id ? "on" : ""}`}
           onClick={() => setView(item.id)}
         >
-          <span className="nav-icon-wrap">{item.icon}</span>
+          <span className="bnav-icon">{item.icon}</span>
           {item.label}
         </button>
       ))}

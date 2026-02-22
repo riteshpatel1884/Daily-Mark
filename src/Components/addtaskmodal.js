@@ -1,71 +1,70 @@
 "use client";
 import { useState } from "react";
-import { useApp } from "@/Components/store";
+import { useApp, TASK_TYPES, SUBJECTS } from "@/Components/store";
 
-const PRIORITIES = ["low", "medium", "high"];
-const CATS = ["Work","Learning","Health", "Personal", "Finance", "Other"];
-const P_COLORS = { low: "#3ecf8e", medium: "#f5a524", high: "#e84040" };
+const P_COLORS = {
+  low: "var(--green)",
+  medium: "var(--orange)",
+  high: "var(--red)",
+};
 
 export default function AddTaskModal({ onClose }) {
   const { addTask } = useApp();
   const [text, setText] = useState("");
+  const [type, setType] = useState("assignment");
+  const [subject, setSubject] = useState("DSA");
   const [priority, setPriority] = useState("medium");
-  const [cat, setCat] = useState("Personal");
+  const [deadline, setDeadline] = useState("");
 
   function submit(e) {
     e.preventDefault();
     if (!text.trim()) return;
-    addTask(text.trim(), priority, cat);
+    addTask({
+      text: text.trim(),
+      type,
+      subject,
+      priority,
+      deadline: deadline ? new Date(deadline).getTime() : null,
+    });
     onClose();
   }
 
   return (
     <div
-      className="overlay fade-in"
+      className="overlay fadeIn"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="sheet">
-        {/* Handle */}
-        <div
-          style={{
-            width: 36,
-            height: 4,
-            background: "var(--line-2)",
-            borderRadius: 99,
-            margin: "0 auto 20px",
-            display: "block",
-          }}
-        />
-
+        <div className="drag-handle" />
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: "20px",
+            marginBottom: 18,
           }}
         >
           <h2
             style={{
-              fontSize: "18px",
+              fontSize: 17,
               fontWeight: 700,
               color: "var(--txt)",
-              letterSpacing: "-0.02em",
+              letterSpacing: "-.02em",
             }}
           >
-            New Task
+            Add Task
           </h2>
           <button
             onClick={onClose}
             style={{
-              background: "var(--bg-3)",
+              background: "var(--bg4)",
               border: "none",
-              borderRadius: "8px",
-              width: 30,
-              height: 30,
+              borderRadius: 8,
+              width: 28,
+              height: 28,
               cursor: "pointer",
-              color: "var(--txt-2)",
-              fontSize: 18,
+              color: "var(--txt2)",
+              fontSize: 17,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -77,73 +76,111 @@ export default function AddTaskModal({ onClose }) {
 
         <form
           onSubmit={submit}
-          style={{ display: "flex", flexDirection: "column", gap: 16 }}
+          style={{ display: "flex", flexDirection: "column", gap: 14 }}
         >
           <textarea
             autoFocus
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="What needs to be done?"
-            rows={3}
+            rows={2}
             className="inp"
-            style={{ resize: "none", lineHeight: 1.55 }}
+            style={{ resize: "none", lineHeight: 1.5 }}
             onKeyDown={(e) => e.key === "Enter" && e.metaKey && submit(e)}
           />
 
+          {/* Type */}
           <div>
-            <div className="sec-label">Priority</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {PRIORITIES.map((p) => (
+            <div className="slabel">Task Type</div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gap: 6,
+              }}
+            >
+              {Object.entries(TASK_TYPES).map(([key, info]) => (
                 <button
-                  key={p}
+                  key={key}
                   type="button"
-                  onClick={() => setPriority(p)}
+                  onClick={() => setType(key)}
                   style={{
-                    flex: 1,
-                    padding: "9px 0",
-                    borderRadius: 10,
-                    border: `1.5px solid ${priority === p ? P_COLORS[p] : "var(--line)"}`,
-                    background:
-                      priority === p ? P_COLORS[p] + "22" : "transparent",
-                    color: priority === p ? P_COLORS[p] : "var(--txt-2)",
+                    padding: "8px 4px",
+                    borderRadius: 9,
+                    border: `1.5px solid ${type === key ? info.color : "var(--border)"}`,
+                    background: type === key ? info.bg : "transparent",
+                    color: type === key ? info.color : "var(--txt2)",
                     fontFamily: "var(--font)",
-                    fontSize: 13,
-                    fontWeight: 500,
+                    fontSize: 12,
+                    fontWeight: 600,
                     cursor: "pointer",
+                    transition: "all .15s",
                     textTransform: "capitalize",
-                    transition: "all 0.15s",
                   }}
                 >
-                  {p}
+                  {info.label}
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Subject */}
           <div>
-            <div className="sec-label">Category</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {CATS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCat(c)}
-                  style={{
-                    padding: "7px 14px",
-                    borderRadius: 99,
-                    border: `1.5px solid ${cat === c ? "var(--txt)" : "var(--line)"}`,
-                    background: cat === c ? "var(--txt)" : "transparent",
-                    color: cat === c ? "var(--bg)" : "var(--txt-2)",
-                    fontFamily: "var(--font)",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {c}
-                </button>
+            <div className="slabel">Subject</div>
+            <select
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="inp"
+            >
+              {SUBJECTS.map((s) => (
+                <option key={s}>{s}</option>
               ))}
+            </select>
+          </div>
+
+          {/* Priority + Deadline row */}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
+          >
+            <div>
+              <div className="slabel">Priority</div>
+              <div style={{ display: "flex", gap: 5 }}>
+                {["low", "medium", "high"].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPriority(p)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 0",
+                      borderRadius: 8,
+                      border: `1.5px solid ${priority === p ? P_COLORS[p] : "var(--border)"}`,
+                      background:
+                        priority === p ? P_COLORS[p] + "22" : "transparent",
+                      color: priority === p ? P_COLORS[p] : "var(--txt2)",
+                      fontFamily: "var(--font)",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all .15s",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="slabel">Deadline</div>
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="inp"
+                style={{ fontSize: 13 }}
+                min={new Date().toISOString().slice(0, 10)}
+              />
             </div>
           </div>
 
@@ -152,16 +189,16 @@ export default function AddTaskModal({ onClose }) {
             disabled={!text.trim()}
             style={{
               marginTop: 4,
-              padding: "14px",
-              borderRadius: 12,
+              padding: "13px",
+              borderRadius: 11,
               border: "none",
-              background: text.trim() ? "var(--txt)" : "var(--line)",
-              color: text.trim() ? "var(--bg)" : "var(--txt-3)",
+              background: text.trim() ? "var(--txt)" : "var(--border)",
+              color: text.trim() ? "var(--bg)" : "var(--txt3)",
               fontFamily: "var(--font)",
-              fontSize: 15,
-              fontWeight: 600,
+              fontSize: 14,
+              fontWeight: 700,
               cursor: text.trim() ? "pointer" : "not-allowed",
-              transition: "all 0.15s",
+              transition: "all .15s",
             }}
           >
             Add Task

@@ -1,7 +1,7 @@
 "use client";
-import { useApp } from "@/Components/store";
+import { useApp, TASK_TYPES } from "@/Components/store";
 
-function Ring({ pct, size = 96 }) {
+function Ring({ pct, size = 100, color = "var(--txt)" }) {
   const r = (size - 10) / 2,
     c = 2 * Math.PI * r;
   return (
@@ -9,14 +9,14 @@ function Ring({ pct, size = 96 }) {
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
-      className="ring"
+      style={{ transform: "rotate(-90deg)" }}
     >
       <circle
         cx={size / 2}
         cy={size / 2}
         r={r}
         fill="none"
-        stroke="var(--line)"
+        stroke="var(--border)"
         strokeWidth="6"
       />
       <circle
@@ -24,11 +24,11 @@ function Ring({ pct, size = 96 }) {
         cy={size / 2}
         r={r}
         fill="none"
-        stroke="var(--txt)"
+        stroke={color}
         strokeWidth="6"
         strokeDasharray={`${(pct / 100) * c} ${c}`}
         strokeLinecap="round"
-        style={{ transition: "stroke-dasharray 0.5s ease" }}
+        style={{ transition: "stroke-dasharray .5s ease" }}
       />
     </svg>
   );
@@ -42,15 +42,15 @@ function Bar({ label, value, isToday }) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 5,
+        gap: 4,
       }}
     >
       <div
         style={{
-          fontSize: 10,
-          color: "var(--txt-3)",
-          fontWeight: 600,
-          letterSpacing: "0.04em",
+          fontSize: 9,
+          color: "var(--txt3)",
+          fontWeight: 700,
+          letterSpacing: ".04em",
         }}
       >
         {label}
@@ -58,11 +58,11 @@ function Bar({ label, value, isToday }) {
       <div
         style={{
           width: "100%",
-          maxWidth: 30,
-          height: 72,
-          background: "var(--bg-3)",
+          maxWidth: 28,
+          height: 68,
+          background: "var(--bg3)",
           borderRadius: 6,
-          border: isToday ? "1.5px solid var(--txt)" : "1px solid var(--line)",
+          border: `1.5px solid ${isToday ? "var(--txt)" : "var(--border)"}`,
           overflow: "hidden",
           display: "flex",
           alignItems: "flex-end",
@@ -72,92 +72,101 @@ function Bar({ label, value, isToday }) {
           style={{
             width: "100%",
             height: `${value}%`,
-            background: isToday ? "var(--txt)" : "var(--txt-2)",
-            transition: "height 0.5s ease",
+            background: isToday ? "var(--txt)" : "var(--txt2)",
+            transition: "height .5s ease",
           }}
         />
       </div>
-      <div style={{ fontSize: 10, color: "var(--txt-3)" }}>{value}%</div>
+      <div
+        style={{ fontSize: 9, color: "var(--txt3)", fontFamily: "var(--mono)" }}
+      >
+        {value}%
+      </div>
     </div>
   );
 }
 
 export default function ProgressView() {
-  const { tasks, doneCount, progress, history } = useApp();
+  const { tasks, doneCount, progress, history, subjects } = useApp();
 
   const today = new Date();
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
   const week = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(d.getDate() - (6 - i));
     const key = d.toISOString().slice(0, 10);
-    const isToday = i === 6;
-    const entry = history[key];
     return {
       label: DAYS[d.getDay()],
-      value: isToday ? progress : entry?.rate || 0,
-      isToday,
+      value: i === 6 ? progress : history[key]?.rate || 0,
+      isToday: i === 6,
     };
   });
 
   const totalDays = Object.keys(history).length + 1;
-  const avgRate =
-    totalDays > 0
-      ? Math.round(
-          (Object.values(history).reduce((s, h) => s + h.rate, 0) + progress) /
-            totalDays,
-        )
-      : progress;
+  const allRates = [...Object.values(history).map((h) => h.rate), progress];
+  const avgRate = Math.round(
+    allRates.reduce((s, v) => s + v, 0) / allRates.length,
+  );
 
   const streak = (() => {
     let s = 0,
       d = new Date(today);
     while (true) {
       const k = d.toISOString().slice(0, 10);
-      const val =
+      const v =
         k === today.toISOString().slice(0, 10) ? progress : history[k]?.rate;
-      if (val === undefined || val < 50) break;
+      if (v === undefined || v < 50) break;
       s++;
       d.setDate(d.getDate() - 1);
     }
     return s;
   })();
 
-  // category breakdown — handle both old (category) and new (cat) field names
-  const cats = {};
+  const totalPomos = tasks.reduce((s, t) => s + (t.pomodoros || 0), 0);
+  const focusMins = totalPomos * 25;
+
+  // by type
+  const byType = {};
   tasks.forEach((t) => {
-    const key = t.cat || t.category || "Other";
-    if (!cats[key]) cats[key] = { total: 0, done: 0 };
-    cats[key].total++;
-    if (t.done || t.completed) cats[key].done++;
+    const tp = t.type || "other";
+    if (!byType[tp]) byType[tp] = { total: 0, done: 0 };
+    byType[tp].total++;
+    if (t.done) byType[tp].done++;
   });
+
+  // avg attendance
+  const avgAttend = subjects.length
+    ? Math.round(
+        subjects.reduce((s, sub) => s + (sub.attendance || 0), 0) /
+          subjects.length,
+      )
+    : null;
 
   return (
     <div className="page">
       <h1
         style={{
-          fontSize: 28,
-          fontWeight: 700,
-          letterSpacing: "-0.03em",
+          fontSize: 26,
+          fontWeight: 800,
+          letterSpacing: "-.03em",
           color: "var(--txt)",
           marginBottom: 4,
         }}
       >
-        Progress
+        Analytics
       </h1>
-      <p style={{ fontSize: 14, color: "var(--txt-3)", marginBottom: 24 }}>
-        Your productivity overview
+      <p style={{ fontSize: 13, color: "var(--txt3)", marginBottom: 20 }}>
+        Your study performance at a glance
       </p>
 
-      {/* today ring + stats */}
+      {/* Today ring */}
       <div
         className="card"
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 20,
-          marginBottom: 14,
+          gap: 18,
+          marginBottom: 12,
         }}
       >
         <div style={{ position: "relative", flexShrink: 0 }}>
@@ -170,7 +179,7 @@ export default function ProgressView() {
               alignItems: "center",
               justifyContent: "center",
               fontSize: 15,
-              fontWeight: 700,
+              fontWeight: 800,
               color: "var(--txt)",
             }}
           >
@@ -178,82 +187,78 @@ export default function ProgressView() {
           </div>
         </div>
         <div>
-          <div className="sec-label">Today</div>
+          <div className="slabel">Today's Progress</div>
           <div
             style={{
               fontSize: 24,
-              fontWeight: 700,
-              letterSpacing: "-0.03em",
+              fontWeight: 800,
+              letterSpacing: "-.04em",
               color: "var(--txt)",
             }}
           >
             {doneCount}
             <span
-              style={{ fontSize: 16, color: "var(--txt-3)", fontWeight: 400 }}
+              style={{ fontSize: 15, color: "var(--txt3)", fontWeight: 400 }}
             >
               /{tasks.length}
             </span>
           </div>
-          <div style={{ fontSize: 13, color: "var(--txt-2)", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 2 }}>
             tasks completed
           </div>
         </div>
       </div>
 
-      {/* 3 stats */}
+      {/* Stats grid */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateColumns: "1fr 1fr",
           gap: 10,
-          marginBottom: 14,
+          marginBottom: 12,
         }}
       >
         {[
-          { label: "Streak", value: `${streak}d` },
-          { label: "Avg", value: `${avgRate}%` },
-          { label: "Days", value: totalDays },
+          { label: "Streak", value: `${streak}d`, sub: "consecutive days" },
+          { label: "Avg Rate", value: `${avgRate}%`, sub: "completion avg" },
+          {
+            label: "Focus",
+            value: `${focusMins}m`,
+            sub: `${totalPomos} pomodoros`,
+          },
+          {
+            label: "Attend",
+            value: avgAttend != null ? `${avgAttend}%` : "—",
+            sub: "avg attendance",
+          },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="card"
-            style={{ textAlign: "center", padding: "14px 10px" }}
-          >
+          <div key={s.label} className="card" style={{ padding: "14px" }}>
+            <div className="slabel">{s.label}</div>
             <div
               style={{
-                fontSize: 22,
-                fontWeight: 700,
-                letterSpacing: "-0.02em",
+                fontSize: 24,
+                fontWeight: 800,
+                letterSpacing: "-.04em",
                 color: "var(--txt)",
+                marginBottom: 2,
               }}
             >
               {s.value}
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--txt-3)",
-                marginTop: 3,
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-              }}
-            >
-              {s.label}
-            </div>
+            <div style={{ fontSize: 11, color: "var(--txt3)" }}>{s.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* weekly bars */}
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="sec-label">Last 7 Days</div>
+      {/* Weekly chart */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="slabel">Last 7 Days</div>
         <div
           style={{
             display: "flex",
             gap: 4,
             justifyContent: "space-between",
-            paddingTop: 4,
+            paddingTop: 6,
           }}
         >
           {week.map((d, i) => (
@@ -262,42 +267,81 @@ export default function ProgressView() {
         </div>
       </div>
 
-      {/* categories */}
-      {Object.keys(cats).length > 0 && (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div className="sec-label">By Category</div>
-          {Object.entries(cats).map(([cat, { total, done }]) => {
+      {/* By task type */}
+      {Object.keys(byType).length > 0 && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div className="slabel">By Task Type</div>
+          {Object.entries(byType).map(([tp, { total, done }]) => {
+            const info = TASK_TYPES[tp] || TASK_TYPES.other;
             const rate = Math.round((done / total) * 100);
             return (
-              <div key={cat} style={{ marginBottom: 14 }}>
+              <div key={tp} style={{ marginBottom: 12 }}>
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    marginBottom: 6,
+                    marginBottom: 5,
                   }}
                 >
                   <span
+                    style={{ fontSize: 13, fontWeight: 600, color: info.color }}
+                  >
+                    {info.label}
+                  </span>
+                  <span
                     style={{
-                      fontSize: 14,
-                      fontWeight: 500,
-                      color: "var(--txt)",
+                      fontSize: 12,
+                      color: "var(--txt3)",
+                      fontFamily: "var(--mono)",
                     }}
                   >
-                    {cat}
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--txt-3)" }}>
                     {done}/{total}
                   </span>
                 </div>
-                <div className="prog-track">
-                  <div className="prog-fill" style={{ width: `${rate}%` }} />
+                <div className="ptrack">
+                  <div
+                    className="pfill"
+                    style={{ width: `${rate}%`, background: info.color }}
+                  />
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Productivity tip */}
+      <div
+        style={{
+          background: "var(--blue)15",
+          border: "1px solid var(--blue)33",
+          borderRadius: 14,
+          padding: 14,
+          marginBottom: 8,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: ".07em",
+            textTransform: "uppercase",
+            color: "var(--blue)",
+            marginBottom: 5,
+          }}
+        >
+          💡 Study Tip
+        </div>
+        <div style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.5 }}>
+          {streak >= 7
+            ? "Amazing 7+ day streak! You're in peak momentum. Keep it going!"
+            : streak >= 3
+              ? `Great ${streak}-day streak! Consistency is key to academic success.`
+              : avgRate >= 80
+                ? "High completion rate! Try using Pomodoro sessions to maintain focus."
+                : "Try the 🍅 Pomodoro technique: 25 min focus + 5 min break. It's proven for studying."}
+        </div>
+      </div>
     </div>
   );
 }
