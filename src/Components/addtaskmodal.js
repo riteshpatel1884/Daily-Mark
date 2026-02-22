@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useApp } from "@/Components/store";
 
 const PRIORITIES = ["low", "medium", "high"];
-const CATS = ["Work", "Health", "Personal", "Learning", "Finance", "Other"];
+const CATS = ["Work","Learning","Health", "Personal", "Finance", "Other"];
 const P_COLORS = { low: "#3ecf8e", medium: "#f5a524", high: "#e84040" };
 
 export default function AddTaskModal({ onClose }) {

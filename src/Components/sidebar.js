@@ -1,5 +1,7 @@
 "use client";
 import { useApp } from "@/Components/store";
+import Image from "next/image";
+import Link from "next/link";
 
 const ITEMS = [
   {
@@ -65,23 +67,26 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div style={{ padding: "4px 12px 20px" }}>
-        <div
-          style={{
-            fontSize: "17px",
-            fontWeight: 700,
-            color: "var(--txt)",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          TaskFlow
-        </div>
-        <div
-          style={{ fontSize: "12px", color: "var(--txt-3)", marginTop: "2px" }}
-        >
-          Daily tracker
-        </div>
-      </div>
+      <Link
+        href="/"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          textDecoration: "none",
+          marginBottom:"10PX",
+        }}
+      >
+        {/* Logo Image */}
+        <Image
+          src="/logo.png"
+          alt="Daily Mark Logo"
+          width={150}
+          height={45}
+          priority
+          style={{ objectFit: "contain" }}
+        />
+      </Link>
 
       {/* Mini progress */}
       <div

@@ -119,7 +119,9 @@ function TaskCard({ task, onToggle, onDelete }) {
               gap: 6,
             }}
           >
-            <span className="tag">{task.cat}</span>
+            <span className="tag">
+              {task.cat || task.category || "Personal"}
+            </span>
             <span
               style={{
                 fontSize: 11,

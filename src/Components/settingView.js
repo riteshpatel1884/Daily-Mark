@@ -152,7 +152,7 @@ export default function SettingsView() {
       </div>
 
       <div style={{ textAlign: "center", color: "var(--txt-3)", fontSize: 12 }}>
-        TaskFlow · v1.0
+        Daily Mark · v1.0
       </div>
     </div>
   );

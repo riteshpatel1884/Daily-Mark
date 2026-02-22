@@ -66,7 +66,14 @@ export function AppProvider({ children }) {
     const tk = localStorage.getItem("tf_tasks_" + dayKey());
     const h = localStorage.getItem("tf_hist");
     setThemeState(t);
-    setTasks(tk ? JSON.parse(tk) : SAMPLES);
+    const raw = tk ? JSON.parse(tk) : SAMPLES;
+    // normalize old data: rename 'category' → 'cat', 'completed' → 'done'
+    const normalized = raw.map((t) => ({
+      ...t,
+      cat: t.cat || t.category || "Personal",
+      done: t.done !== undefined ? t.done : t.completed || false,
+    }));
+    setTasks(normalized);
     setHistory(h ? JSON.parse(h) : {});
     setReady(true);
   }, []);

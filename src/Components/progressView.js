@@ -124,12 +124,13 @@ export default function ProgressView() {
     return s;
   })();
 
-  // category breakdown
+  // category breakdown — handle both old (category) and new (cat) field names
   const cats = {};
   tasks.forEach((t) => {
-    if (!cats[t.cat]) cats[t.cat] = { total: 0, done: 0 };
-    cats[t.cat].total++;
-    if (t.done) cats[t.cat].done++;
+    const key = t.cat || t.category || "Other";
+    if (!cats[key]) cats[key] = { total: 0, done: 0 };
+    cats[key].total++;
+    if (t.done || t.completed) cats[key].done++;
   });
 
   return (
