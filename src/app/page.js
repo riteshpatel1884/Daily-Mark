@@ -5,6 +5,8 @@ import BottomNav from "@/Components/bottomnav";
 import TodayView from "@/Components/todayView";
 import ExamView from "@/Components/ExamView";
 import AttendanceView from "@/Components/AttendanceView";
+import TimetableView from "@/Components/Timetableview";
+import MarksView from "@/Components/Marksview";
 import ProgressView from "@/Components/progressView";
 import SettingsView from "@/Components/settingView";
 
@@ -17,6 +19,8 @@ function App() {
         {view === "today" && <TodayView />}
         {view === "exams" && <ExamView />}
         {view === "attendance" && <AttendanceView />}
+        {view === "timetable" && <TimetableView />}
+        {view === "marks" && <MarksView />}
         {view === "progress" && <ProgressView />}
         {view === "settings" && <SettingsView />}
       </div>

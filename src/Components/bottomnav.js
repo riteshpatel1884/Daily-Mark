@@ -7,8 +7,8 @@ const ITEMS = [
     label: "Today",
     icon: (
       <svg
-        width="19"
-        height="19"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -22,12 +22,12 @@ const ITEMS = [
     ),
   },
   {
-    id: "exams",
-    label: "Exams",
+    id: "timetable",
+    label: "Schedule",
     icon: (
       <svg
-        width="19"
-        height="19"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -35,8 +35,8 @@ const ITEMS = [
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M12 20h9" />
-        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
       </svg>
     ),
   },
@@ -45,8 +45,8 @@ const ITEMS = [
     label: "Attend",
     icon: (
       <svg
-        width="19"
-        height="19"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -61,12 +61,12 @@ const ITEMS = [
     ),
   },
   {
-    id: "progress",
-    label: "Stats",
+    id: "marks",
+    label: "Marks",
     icon: (
       <svg
-        width="19"
-        height="19"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -74,7 +74,8 @@ const ITEMS = [
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
       </svg>
     ),
   },
@@ -83,8 +84,8 @@ const ITEMS = [
     label: "More",
     icon: (
       <svg
-        width="19"
-        height="19"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

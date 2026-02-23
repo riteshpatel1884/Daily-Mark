@@ -7,8 +7,8 @@ const ITEMS = [
     label: "Today",
     icon: (
       <svg
-        width="15"
-        height="15"
+        width="14"
+        height="14"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -22,12 +22,31 @@ const ITEMS = [
     ),
   },
   {
+    id: "timetable",
+    label: "Timetable",
+    icon: (
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+  },
+  {
     id: "exams",
     label: "Exam Countdown",
     icon: (
       <svg
-        width="15"
-        height="15"
+        width="14"
+        height="14"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -45,8 +64,8 @@ const ITEMS = [
     label: "Attendance",
     icon: (
       <svg
-        width="15"
-        height="15"
+        width="14"
+        height="14"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -61,12 +80,31 @@ const ITEMS = [
     ),
   },
   {
+    id: "marks",
+    label: "Marks Tracker",
+    icon: (
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+    ),
+  },
+  {
     id: "progress",
     label: "Analytics",
     icon: (
       <svg
-        width="15"
-        height="15"
+        width="14"
+        height="14"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -83,8 +121,8 @@ const ITEMS = [
     label: "Settings",
     icon: (
       <svg
-        width="15"
-        height="15"
+        width="14"
+        height="14"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -100,13 +138,34 @@ const ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { view, setView, progress, doneCount, tasks, upcomingExams, sem } =
-    useApp();
+  const {
+    view,
+    setView,
+    progress,
+    doneCount,
+    tasks,
+    upcomingExams,
+    sem,
+    nextClass,
+    nextClassMins,
+    carriedCount,
+  } = useApp();
   const nextExam = upcomingExams[0];
+
+  function minsLabel(mins) {
+    if (!mins) return "";
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? (mins % 60) + "m" : ""}`;
+  }
+
+  function fmt12(t) {
+    if (!t) return "";
+    const [h, m] = t.split(":").map(Number);
+    return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+  }
 
   return (
     <aside className="sidebar">
-      {/* Logo */}
       <div style={{ padding: "2px 11px 18px" }}>
         <div
           style={{
@@ -116,14 +175,96 @@ export default function Sidebar() {
             letterSpacing: "-.02em",
           }}
         >
-          Daily MARK
+          GradeFlow
         </div>
         <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 1 }}>
           {sem}
         </div>
       </div>
 
-      {/* Today quick stats */}
+      {/* Next class */}
+      {nextClass && (
+        <div
+          style={{
+            background: "var(--blue)18",
+            border: "1px solid var(--blue)33",
+            borderRadius: 10,
+            padding: "9px 11px",
+            marginBottom: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".07em",
+              textTransform: "uppercase",
+              color: "var(--blue)",
+              marginBottom: 3,
+            }}
+          >
+            Next Class
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--txt)" }}>
+            {nextClass.subject}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: 2,
+            }}
+          >
+            <div style={{ fontSize: 11, color: "var(--txt2)" }}>
+              {fmt12(nextClass.startTime)}
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: 12,
+                fontWeight: 700,
+                color: "var(--blue)",
+              }}
+            >
+              {minsLabel(nextClassMins)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Carried over alert */}
+      {carriedCount > 0 && (
+        <div
+          style={{
+            background: "var(--orange)18",
+            border: "1px solid var(--orange)44",
+            borderRadius: 10,
+            padding: "9px 11px",
+            marginBottom: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".07em",
+              textTransform: "uppercase",
+              color: "var(--orange)",
+              marginBottom: 2,
+            }}
+          >
+            Backlog
+          </div>
+          <div
+            style={{ fontSize: 12, color: "var(--orange)", fontWeight: 600 }}
+          >
+            {carriedCount} task{carriedCount > 1 ? "s" : ""} from yesterday
+          </div>
+        </div>
+      )}
+
+      {/* Today progress */}
       <div
         style={{
           background: "var(--bg3)",
@@ -174,7 +315,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Next exam chip */}
+      {/* Next exam */}
       {nextExam && (
         <div
           style={{
@@ -217,7 +358,6 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Nav */}
       <div
         style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}
       >

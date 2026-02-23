@@ -54,11 +54,9 @@ function calcNeeded(present, total, target = 75) {
 }
 
 function calcCanBunk(present, total, target = 75) {
-  const x = Math.floor((present * 100 - target * total) / target);
-  return Math.max(0, x);
+  return Math.max(0, Math.floor((present * 100 - target * total) / target));
 }
 
-// ── MANUAL ENTRY COMPONENT ──────────────────────────────────────────────────
 function ManualEntry({ subj, updateSubject }) {
   const [open, setOpen] = useState(false);
   const [present, setPresent] = useState(String(subj.present));
@@ -68,7 +66,7 @@ function ManualEntry({ subj, updateSubject }) {
     e.preventDefault();
     const p = Math.max(0, parseInt(present) || 0);
     const t = Math.max(0, parseInt(total) || 0);
-    const safeP = Math.min(p, t); // present can't exceed total
+    const safeP = Math.min(p, t);
     updateSubject(subj.id, {
       present: safeP,
       total: t,
@@ -79,16 +77,12 @@ function ManualEntry({ subj, updateSubject }) {
     setOpen(false);
   }
 
-  // sync if parent changes
-  const syncedP = String(subj.present);
-  const syncedT = String(subj.total);
-
   return (
     <div>
       <button
         onClick={() => {
-          setPresent(syncedP);
-          setTotal(syncedT);
+          setPresent(String(subj.present));
+          setTotal(String(subj.total));
           setOpen((o) => !o);
         }}
         style={{
@@ -102,7 +96,6 @@ function ManualEntry({ subj, updateSubject }) {
           fontSize: 12,
           fontWeight: 500,
           cursor: "pointer",
-          transition: "all .15s",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -137,7 +130,7 @@ function ManualEntry({ subj, updateSubject }) {
           onSubmit={apply}
           style={{
             marginTop: 8,
-            padding: "12px",
+            padding: 12,
             borderRadius: 10,
             background: "var(--bg3)",
             border: "1px solid var(--border)",
@@ -152,63 +145,39 @@ function ManualEntry({ subj, updateSubject }) {
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
           >
-            <div>
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: ".07em",
-                  textTransform: "uppercase",
-                  color: "var(--txt3)",
-                  marginBottom: 5,
-                }}
-              >
-                Attended
+            {[
+              ["Attended", present, setPresent],
+              ["Total", total, setTotal],
+            ].map(([lbl, val, set]) => (
+              <div key={lbl}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: ".07em",
+                    textTransform: "uppercase",
+                    color: "var(--txt3)",
+                    marginBottom: 5,
+                  }}
+                >
+                  {lbl}
+                </div>
+                <input
+                  type="number"
+                  min={0}
+                  value={val}
+                  onChange={(e) => set(e.target.value)}
+                  className="inp"
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    padding: "9px",
+                  }}
+                />
               </div>
-              <input
-                type="number"
-                min={0}
-                value={present}
-                onChange={(e) => setPresent(e.target.value)}
-                className="inp"
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  textAlign: "center",
-                  padding: "9px",
-                }}
-              />
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: ".07em",
-                  textTransform: "uppercase",
-                  color: "var(--txt3)",
-                  marginBottom: 5,
-                }}
-              >
-                Total
-              </div>
-              <input
-                type="number"
-                min={0}
-                value={total}
-                onChange={(e) => setTotal(e.target.value)}
-                className="inp"
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  textAlign: "center",
-                  padding: "9px",
-                }}
-              />
-            </div>
+            ))}
           </div>
-
-          {/* live preview */}
           {(() => {
             const p = Math.min(
               Math.max(0, parseInt(present) || 0),
@@ -249,7 +218,6 @@ function ManualEntry({ subj, updateSubject }) {
               </div>
             );
           })()}
-
           <div style={{ display: "flex", gap: 7 }}>
             <button
               type="submit"
@@ -291,7 +259,113 @@ function ManualEntry({ subj, updateSubject }) {
   );
 }
 
-// ── MAIN VIEW ───────────────────────────────────────────────────────────────
+function NotePad({ subj }) {
+  const { notes, setNote } = useApp();
+  const [open, setOpen] = useState(false);
+  const text = notes[subj.id] || "";
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%",
+          padding: "7px",
+          borderRadius: 9,
+          border: "1px solid var(--border)",
+          background: text ? "var(--purple)15" : "transparent",
+          color: text ? "var(--purple)" : "var(--txt3)",
+          fontFamily: "var(--font)",
+          fontSize: 12,
+          fontWeight: 500,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}
+      >
+        <svg
+          width="11"
+          height="11"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        >
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        {text ? "View notes" : "Add notes"}
+        {text && (
+          <span style={{ fontSize: 10, opacity: 0.6 }}>
+            ({text.length} chars)
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: 12,
+            borderRadius: 10,
+            background: "var(--bg3)",
+            border: "1px solid var(--border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: ".07em",
+              textTransform: "uppercase",
+              color: "var(--purple)",
+            }}
+          >
+            📝 Notes — {subj.name}
+          </div>
+          <textarea
+            value={text}
+            onChange={(e) => setNote(subj.id, e.target.value)}
+            placeholder={`Formulas, references, tips for ${subj.name}...`}
+            rows={5}
+            className="inp"
+            style={{
+              resize: "vertical",
+              lineHeight: 1.6,
+              fontFamily: "var(--mono)",
+              fontSize: 13,
+            }}
+          />
+          <button
+            onClick={() => setOpen(false)}
+            style={{
+              padding: "8px",
+              borderRadius: 9,
+              border: "none",
+              background: "var(--txt)",
+              color: "var(--bg)",
+              fontFamily: "var(--font)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Done
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AttendanceView() {
   const { subjects, updateSubject, addSubject, deleteSubject } = useApp();
   const [showAdd, setShowAdd] = useState(false);
@@ -337,7 +411,6 @@ export default function AttendanceView() {
 
   return (
     <div className="page">
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -389,10 +462,10 @@ export default function AttendanceView() {
         </button>
       </div>
       <p style={{ fontSize: 13, color: "var(--txt3)", marginBottom: 18 }}>
-        Track attendance & bunk calculator
+        Attendance tracker · Bunk calculator · Subject notes
       </p>
 
-      {/* Overall + At Risk */}
+      {/* Stats row */}
       <div
         style={{
           display: "grid",
@@ -475,7 +548,6 @@ export default function AttendanceView() {
         </div>
       </div>
 
-      {/* Add subject form */}
       {showAdd && (
         <form
           onSubmit={handleAdd}
@@ -556,7 +628,6 @@ export default function AttendanceView() {
         </form>
       )}
 
-      {/* Subject cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {subjects.length === 0 ? (
           <div
@@ -588,7 +659,6 @@ export default function AttendanceView() {
 
             return (
               <div key={subj.id} className="subj">
-                {/* Top row */}
                 <div
                   style={{
                     display: "flex",
@@ -647,7 +717,6 @@ export default function AttendanceView() {
 
                 <AttendanceBar pct={pct} />
 
-                {/* Smart advice */}
                 {subj.total > 0 && (
                   <div
                     style={{
@@ -671,7 +740,6 @@ export default function AttendanceView() {
                   </div>
                 )}
 
-                {/* Quick mark buttons */}
                 <div style={{ display: "flex", gap: 7 }}>
                   <button
                     onClick={() => markAttend(subj.id, true)}
@@ -708,9 +776,8 @@ export default function AttendanceView() {
                     ✗ Absent
                   </button>
                 </div>
-
-                {/* Manual entry */}
                 <ManualEntry subj={subj} updateSubject={updateSubject} />
+                <NotePad subj={subj} />
               </div>
             );
           })
