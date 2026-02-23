@@ -31,7 +31,6 @@ function AttendanceBar({ pct }) {
           }}
         />
       </div>
-      {/* 75% marker */}
       <div
         style={{
           position: "absolute",
@@ -48,30 +47,256 @@ function AttendanceBar({ pct }) {
 }
 
 function calcNeeded(present, total, target = 75) {
-  // how many more classes to attend to reach target
-  // present/total >= target/100 → present*100 >= target*total
+  if (total === 0) return { type: "safe", val: 0 };
   if ((present / total) * 100 >= target) return { type: "safe", val: 0 };
-  // present + x / (total + x) = target/100
-  // 100(present + x) = target(total + x)
-  // x(100 - target) = target*total - 100*present
   const x = Math.ceil((target * total - 100 * present) / (100 - target));
   return { type: "need", val: x };
 }
 
 function calcCanBunk(present, total, target = 75) {
-  // (present) / (total + x) >= target/100
-  // present * 100 >= target * (total + x)
-  // x <= (present*100 - target*total) / target
   const x = Math.floor((present * 100 - target * total) / target);
   return Math.max(0, x);
 }
 
+// ── MANUAL ENTRY COMPONENT ──────────────────────────────────────────────────
+function ManualEntry({ subj, updateSubject }) {
+  const [open, setOpen] = useState(false);
+  const [present, setPresent] = useState(String(subj.present));
+  const [total, setTotal] = useState(String(subj.total));
+
+  function apply(e) {
+    e.preventDefault();
+    const p = Math.max(0, parseInt(present) || 0);
+    const t = Math.max(0, parseInt(total) || 0);
+    const safeP = Math.min(p, t); // present can't exceed total
+    updateSubject(subj.id, {
+      present: safeP,
+      total: t,
+      attendance: t > 0 ? Math.round((safeP / t) * 100) : 100,
+    });
+    setPresent(String(safeP));
+    setTotal(String(t));
+    setOpen(false);
+  }
+
+  // sync if parent changes
+  const syncedP = String(subj.present);
+  const syncedT = String(subj.total);
+
+  return (
+    <div>
+      <button
+        onClick={() => {
+          setPresent(syncedP);
+          setTotal(syncedT);
+          setOpen((o) => !o);
+        }}
+        style={{
+          width: "100%",
+          padding: "7px",
+          borderRadius: 9,
+          border: "1px solid var(--border)",
+          background: "transparent",
+          color: "var(--txt3)",
+          fontFamily: "var(--font)",
+          fontSize: 12,
+          fontWeight: 500,
+          cursor: "pointer",
+          transition: "all .15s",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "var(--txt2)";
+          e.currentTarget.style.color = "var(--txt2)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "var(--border)";
+          e.currentTarget.style.color = "var(--txt3)";
+        }}
+      >
+        <svg
+          width="11"
+          height="11"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+        Set manually
+      </button>
+
+      {open && (
+        <form
+          onSubmit={apply}
+          style={{
+            marginTop: 8,
+            padding: "12px",
+            borderRadius: 10,
+            background: "var(--bg3)",
+            border: "1px solid var(--border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--txt2)" }}>
+            Set lecture counts manually
+          </div>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: ".07em",
+                  textTransform: "uppercase",
+                  color: "var(--txt3)",
+                  marginBottom: 5,
+                }}
+              >
+                Attended
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={present}
+                onChange={(e) => setPresent(e.target.value)}
+                className="inp"
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  textAlign: "center",
+                  padding: "9px",
+                }}
+              />
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: ".07em",
+                  textTransform: "uppercase",
+                  color: "var(--txt3)",
+                  marginBottom: 5,
+                }}
+              >
+                Total
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={total}
+                onChange={(e) => setTotal(e.target.value)}
+                className="inp"
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  textAlign: "center",
+                  padding: "9px",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* live preview */}
+          {(() => {
+            const p = Math.min(
+              Math.max(0, parseInt(present) || 0),
+              Math.max(0, parseInt(total) || 0),
+            );
+            const t = Math.max(0, parseInt(total) || 0);
+            const pct = t > 0 ? Math.round((p / t) * 100) : 100;
+            const color =
+              pct >= 85
+                ? "var(--green)"
+                : pct >= 75
+                  ? "var(--yellow)"
+                  : "var(--red)";
+            return (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "8px",
+                  background: "var(--bg4)",
+                  borderRadius: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color,
+                  }}
+                >
+                  {pct}%
+                </span>
+                <span
+                  style={{ fontSize: 12, color: "var(--txt3)", marginLeft: 6 }}
+                >
+                  ({p}/{t} classes)
+                </span>
+              </div>
+            );
+          })()}
+
+          <div style={{ display: "flex", gap: 7 }}>
+            <button
+              type="submit"
+              style={{
+                flex: 1,
+                padding: "9px",
+                borderRadius: 9,
+                border: "none",
+                background: "var(--txt)",
+                color: "var(--bg)",
+                fontFamily: "var(--font)",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              style={{
+                padding: "9px 16px",
+                borderRadius: 9,
+                border: "1px solid var(--border)",
+                background: "transparent",
+                color: "var(--txt2)",
+                fontFamily: "var(--font)",
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ── MAIN VIEW ───────────────────────────────────────────────────────────────
 export default function AttendanceView() {
   const { subjects, updateSubject, addSubject, deleteSubject } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [credits, setCredits] = useState(4);
-  const [editing, setEditing] = useState(null); // subject id being edited
 
   function handleAdd(e) {
     e.preventDefault();
@@ -106,13 +331,13 @@ export default function AttendanceView() {
           subjects.length,
       )
     : 0;
-
   const atRisk = subjects.filter(
     (s) => s.total > 0 && s.attendance < MIN_ATTEND,
   );
 
   return (
     <div className="page">
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -278,6 +503,7 @@ export default function AttendanceView() {
               placeholder="Subject name"
               className="inp"
               style={{ fontSize: 14 }}
+              autoFocus
             />
             <select
               value={credits}
@@ -362,6 +588,7 @@ export default function AttendanceView() {
 
             return (
               <div key={subj.id} className="subj">
+                {/* Top row */}
                 <div
                   style={{
                     display: "flex",
@@ -444,7 +671,7 @@ export default function AttendanceView() {
                   </div>
                 )}
 
-                {/* Mark attendance */}
+                {/* Quick mark buttons */}
                 <div style={{ display: "flex", gap: 7 }}>
                   <button
                     onClick={() => markAttend(subj.id, true)}
@@ -459,7 +686,6 @@ export default function AttendanceView() {
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: "pointer",
-                      transition: "background .15s",
                     }}
                   >
                     ✓ Present
@@ -477,12 +703,14 @@ export default function AttendanceView() {
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: "pointer",
-                      transition: "background .15s",
                     }}
                   >
                     ✗ Absent
                   </button>
                 </div>
+
+                {/* Manual entry */}
+                <ManualEntry subj={subj} updateSubject={updateSubject} />
               </div>
             );
           })

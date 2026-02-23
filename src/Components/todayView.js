@@ -10,7 +10,7 @@ const P_COLOR = {
 };
 const POMO_MINS = 25;
 
-// ── POMODORO MODAL ─────────────────────────────────────────────────────────
+// ── POMODORO MODAL ───────────────────────────────────
 function PomodoroModal({ task, onClose, onComplete }) {
   const WORK = POMO_MINS * 60;
   const BREAK = 5 * 60;
