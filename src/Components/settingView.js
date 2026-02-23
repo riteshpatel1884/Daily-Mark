@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "@/Components/store";
 
 const THEMES = [
@@ -19,7 +19,6 @@ const THEMES = [
   },
   { id: "gray", label: "Gray", bg: "#181818", fg: "#ebebeb", sub: "Mid gray" },
 ];
-
 const SEMS = [
   "Semester 1",
   "Semester 2",
@@ -30,6 +29,61 @@ const SEMS = [
   "Semester 7",
   "Semester 8",
 ];
+const BRANCHES = [
+  "CSE",
+  "IT",
+  "ECE",
+  "EEE",
+  "Mechanical",
+  "Civil",
+  "Chemical",
+  "Aerospace",
+  "Biotech",
+  "Other",
+];
+const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+
+function Avatar({ name, size = 64 }) {
+  const initials =
+    name
+      .trim()
+      .split(" ")
+      .map((w) => w[0]?.toUpperCase() || "")
+      .slice(0, 2)
+      .join("") || "?";
+  // deterministic color from name
+  const colors = [
+    "#5b8def",
+    "#9b72cf",
+    "#4caf7d",
+    "#e8924a",
+    "#d46fa0",
+    "#d4b44a",
+    "#e05252",
+  ];
+  const idx =
+    name.split("").reduce((s, c) => s + c.charCodeAt(0), 0) % colors.length;
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: colors[idx],
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: size * 0.35,
+        fontWeight: 800,
+        color: "#fff",
+        flexShrink: 0,
+        letterSpacing: "-.02em",
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
 
 export default function SettingsView() {
   const {
@@ -44,6 +98,42 @@ export default function SettingsView() {
     setSem,
   } = useApp();
   const totalPomos = tasks.reduce((s, t) => s + (t.pomodoros || 0), 0);
+
+  // Profile state
+  const [name, setName] = useState("");
+  const [college, setCollege] = useState("");
+  const [branch, setBranch] = useState("CSE");
+  const [year, setYear] = useState("2nd Year");
+  const [rollNo, setRollNo] = useState("");
+  const [profileLinks, setProfileLinks] = useState({
+    github: "",
+    linkedin: "",
+    leetcode: "",
+  });
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  // Load profile from localStorage
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem("gr_profile") || "{}");
+      setName(p.name || "");
+      setCollege(p.college || "");
+      setBranch(p.branch || "CSE");
+      setYear(p.year || "2nd Year");
+      setRollNo(p.rollNo || "");
+      setProfileLinks(p.links || { github: "", linkedin: "", leetcode: "" });
+      if (!p.name) setEditingProfile(true); // first time — open editor
+    } catch {}
+  }, []);
+
+  function saveProfile() {
+    const p = { name, college, branch, year, rollNo, links: profileLinks };
+    localStorage.setItem("gr_profile", JSON.stringify(p));
+    setEditingProfile(false);
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 2000);
+  }
 
   function clearDone() {
     if (!confirm("Clear all completed tasks?")) return;
@@ -66,6 +156,76 @@ export default function SettingsView() {
     window.location.reload();
   }
 
+  const LINK_ICONS = {
+    github: {
+      label: "GitHub",
+      placeholder: "github.com/username",
+      color: "#888",
+      icon: (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22" />
+        </svg>
+      ),
+    },
+    linkedin: {
+      label: "LinkedIn",
+      placeholder: "linkedin.com/in/username",
+      color: "#0077b5",
+      icon: (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z" />
+          <rect x="2" y="9" width="4" height="12" />
+          <circle cx="4" cy="4" r="2" />
+        </svg>
+      ),
+    },
+    leetcode: {
+      label: "LeetCode",
+      placeholder: "leetcode.com/username",
+      color: "#ffa116",
+      icon: (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M8 6l6-6 6 6" />
+          <path d="M20 12H4" />
+          <path d="M8 18l6 6 6-6" />
+        </svg>
+      ),
+    },
+  };
+
+  function openLink(url) {
+    if (!url) return;
+    const full = url.startsWith("http") ? url : "https://" + url;
+    window.open(full, "_blank");
+  }
+
   return (
     <div className="page">
       <h1
@@ -74,13 +234,314 @@ export default function SettingsView() {
           fontWeight: 800,
           letterSpacing: "-.03em",
           color: "var(--txt)",
-          marginBottom: 24,
+          marginBottom: 20,
         }}
       >
         Settings
       </h1>
 
-      {/* Theme */}
+      {/* ── PROFILE CARD ── */}
+      <div style={{ marginBottom: 24 }}>
+        <div className="slabel" style={{ marginBottom: 10 }}>
+          Profile
+        </div>
+
+        {!editingProfile ? (
+          <div
+            style={{
+              background: "var(--bg2)",
+              border: "1px solid var(--border)",
+              borderRadius: 16,
+              padding: 18,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                marginBottom: 14,
+              }}
+            >
+              <Avatar name={name || "?"} size={58} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: "var(--txt)",
+                    marginBottom: 2,
+                  }}
+                >
+                  {name || "Your Name"}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--txt2)" }}>
+                  {branch} · {year}
+                </div>
+                {college && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--txt3)",
+                      marginTop: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {college}
+                  </div>
+                )}
+                {rollNo && (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--txt3)",
+                      fontFamily: "var(--mono)",
+                      marginTop: 2,
+                    }}
+                  >
+                    #{rollNo}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setEditingProfile(true)}
+                style={{
+                  background: "var(--bg3)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 9,
+                  padding: "7px 13px",
+                  color: "var(--txt2)",
+                  fontFamily: "var(--font)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                Edit
+              </button>
+            </div>
+
+            {/* Profile links */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {Object.entries(LINK_ICONS).map(([key, info]) => {
+                const val = profileLinks[key];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => openLink(val)}
+                    disabled={!val}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 12px",
+                      borderRadius: 9,
+                      border: `1px solid ${val ? info.color + "44" : "var(--border)"}`,
+                      background: val ? info.color + "15" : "var(--bg3)",
+                      color: val ? info.color : "var(--txt3)",
+                      fontFamily: "var(--font)",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: val ? "pointer" : "not-allowed",
+                      transition: "all .15s",
+                      opacity: val ? 1 : 0.5,
+                    }}
+                  >
+                    {info.icon}
+                    {info.label}
+                    {val && (
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              background: "var(--bg2)",
+              border: "1px solid var(--border)",
+              borderRadius: 16,
+              padding: 18,
+              display: "flex",
+              flexDirection: "column",
+              gap: 13,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 4,
+              }}
+            >
+              <Avatar name={name || "?"} size={44} />
+              <div
+                style={{ fontSize: 13, color: "var(--txt2)", fontWeight: 500 }}
+              >
+                {name ? `Hi, ${name.split(" ")[0]}! 👋` : "Set up your profile"}
+              </div>
+            </div>
+
+            {/* Basic info */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
+              <div style={{ gridColumn: "1/-1" }}>
+                <div className="slabel">Full Name</div>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="inp"
+                  style={{ fontSize: 14 }}
+                />
+              </div>
+              <div style={{ gridColumn: "1/-1" }}>
+                <div className="slabel">College / University</div>
+                <input
+                  value={college}
+                  onChange={(e) => setCollege(e.target.value)}
+                  placeholder="e.g. IIT Delhi, VIT Vellore"
+                  className="inp"
+                  style={{ fontSize: 14 }}
+                />
+              </div>
+              <div>
+                <div className="slabel">Branch</div>
+                <select
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="inp"
+                >
+                  {BRANCHES.map((b) => (
+                    <option key={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="slabel">Year</div>
+                <select
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                  className="inp"
+                >
+                  {YEARS.map((y) => (
+                    <option key={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ gridColumn: "1/-1" }}>
+                <div className="slabel">Roll Number</div>
+                <input
+                  value={rollNo}
+                  onChange={(e) => setRollNo(e.target.value)}
+                  placeholder="e.g. 21CSE0123"
+                  className="inp"
+                  style={{ fontFamily: "var(--mono)", fontSize: 14 }}
+                />
+              </div>
+            </div>
+
+            {/* Profile links */}
+            <div>
+              <div className="slabel" style={{ marginBottom: 8 }}>
+                Profile Links
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {Object.entries(LINK_ICONS).map(([key, info]) => (
+                  <div key={key} style={{ position: "relative" }}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 11,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: info.color,
+                      }}
+                    >
+                      {info.icon}
+                    </div>
+                    <input
+                      value={profileLinks[key]}
+                      onChange={(e) =>
+                        setProfileLinks((p) => ({
+                          ...p,
+                          [key]: e.target.value,
+                        }))
+                      }
+                      placeholder={info.placeholder}
+                      className="inp"
+                      style={{ paddingLeft: 34, fontSize: 13 }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <button
+                onClick={saveProfile}
+                style={{
+                  flex: 1,
+                  padding: "11px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "var(--txt)",
+                  color: "var(--bg)",
+                  fontFamily: "var(--font)",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  position: "relative",
+                }}
+              >
+                {profileSaved ? "✓ Saved!" : "Save Profile"}
+              </button>
+              {name && (
+                <button
+                  onClick={() => setEditingProfile(false)}
+                  style={{
+                    padding: "11px 16px",
+                    borderRadius: 10,
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--txt2)",
+                    fontFamily: "var(--font)",
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── THEME ── */}
       <div style={{ marginBottom: 24 }}>
         <div className="slabel" style={{ marginBottom: 10 }}>
           Theme
@@ -127,10 +588,10 @@ export default function SettingsView() {
         </div>
       </div>
 
-      {/* Academic */}
+      {/* ── ACADEMIC ── */}
       <div style={{ marginBottom: 24 }}>
         <div className="slabel" style={{ marginBottom: 10 }}>
-          Academic Profile
+          Academic
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div className="setrow">
@@ -167,7 +628,6 @@ export default function SettingsView() {
               ))}
             </select>
           </div>
-
           <div className="setrow">
             <div>
               <div
@@ -210,7 +670,7 @@ export default function SettingsView() {
         </div>
       </div>
 
-      {/* Today stats */}
+      {/* ── TODAY STATS ── */}
       <div style={{ marginBottom: 24 }}>
         <div className="slabel" style={{ marginBottom: 10 }}>
           Today
@@ -245,7 +705,7 @@ export default function SettingsView() {
         </div>
       </div>
 
-      {/* Data */}
+      {/* ── DATA ── */}
       <div style={{ marginBottom: 36 }}>
         <div className="slabel" style={{ marginBottom: 10 }}>
           Data
@@ -310,7 +770,7 @@ export default function SettingsView() {
         </div>
       </div>
 
-      <div style={{ textAlign: "center" }}>
+      <div style={{ textAlign: "center", paddingBottom: 8 }}>
         <div
           style={{
             fontSize: 13,
@@ -319,7 +779,7 @@ export default function SettingsView() {
             letterSpacing: ".04em",
           }}
         >
-          Daily Mark
+          GradeFlow
         </div>
         <div
           style={{

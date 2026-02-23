@@ -99,6 +99,27 @@ const ITEMS = [
     ),
   },
   {
+    id: "notes",
+    label: "Notes",
+    icon: (
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    ),
+  },
+  {
     id: "progress",
     label: "Analytics",
     icon: (
@@ -152,10 +173,22 @@ export default function Sidebar() {
   } = useApp();
   const nextExam = upcomingExams[0];
 
+  // Load profile name
+  let profileName = "",
+    profileBranch = "",
+    profileYear = "";
+  try {
+    const p = JSON.parse(localStorage.getItem("gr_profile") || "{}");
+    profileName = p.name || "";
+    profileBranch = p.branch || "";
+    profileYear = p.year || "";
+  } catch {}
+
   function minsLabel(mins) {
     if (!mins) return "";
-    if (mins < 60) return `${mins}m`;
-    return `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? (mins % 60) + "m" : ""}`;
+    return mins < 60
+      ? `${mins}m`
+      : `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? (mins % 60) + "m" : ""}`;
   }
 
   function fmt12(t) {
@@ -164,21 +197,78 @@ export default function Sidebar() {
     return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
   }
 
+  // Avatar initials + color
+  const initials =
+    profileName
+      .trim()
+      .split(" ")
+      .map((w) => w[0]?.toUpperCase() || "")
+      .slice(0, 2)
+      .join("") || "?";
+  const avatarColors = [
+    "#5b8def",
+    "#9b72cf",
+    "#4caf7d",
+    "#e8924a",
+    "#d46fa0",
+    "#d4b44a",
+  ];
+  const avatarColor =
+    avatarColors[
+      profileName.split("").reduce((s, c) => s + c.charCodeAt(0), 0) %
+        avatarColors.length
+    ];
+
   return (
     <aside className="sidebar">
-      <div style={{ padding: "2px 11px 18px" }}>
+      {/* Profile mini card */}
+      <div
+        style={{
+          padding: "2px 11px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
         <div
+          onClick={() => setView("settings")}
           style={{
-            fontSize: 15,
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            background: profileName ? avatarColor : "var(--bg4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 13,
             fontWeight: 800,
-            color: "var(--txt)",
-            letterSpacing: "-.02em",
+            color: "#fff",
+            flexShrink: 0,
+            cursor: "pointer",
+            border: "2px solid var(--border)",
           }}
         >
-          GradeFlow
+          {initials}
         </div>
-        <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 1 }}>
-          {sem}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "var(--txt)",
+              letterSpacing: "-.01em",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {profileName || "GradeFlow"}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+            {profileBranch && profileYear
+              ? `${profileBranch} · ${profileYear}`
+              : sem}
+          </div>
         </div>
       </div>
 
@@ -233,7 +323,7 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Carried over alert */}
+      {/* Carried over */}
       {carriedCount > 0 && (
         <div
           style={{
@@ -358,6 +448,7 @@ export default function Sidebar() {
         </div>
       )}
 
+      {/* Nav */}
       <div
         style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}
       >
