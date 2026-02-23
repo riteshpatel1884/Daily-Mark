@@ -9,7 +9,6 @@ import {
 const Ctx = createContext(null);
 const dayKey = () => new Date().toISOString().slice(0, 10);
 
-// Task types for BTech
 export const TASK_TYPES = {
   assignment: { label: "Assignment", color: "#5b8def", bg: "#5b8def18" },
   exam: { label: "Exam", color: "#e05252", bg: "#e0525218" },
@@ -35,110 +34,6 @@ export const SUBJECTS = [
   "Other",
 ];
 
-const SAMPLE_TASKS = [
-  {
-    id: "1",
-    text: "Complete DSA Assignment #3",
-    done: false,
-    priority: "high",
-    type: "assignment",
-    subject: "DSA",
-    deadline: Date.now() + 86400000 * 2,
-    pomodoros: 0,
-    at: Date.now(),
-  },
-  {
-    id: "2",
-    text: "Study OS Chapter 5 - Memory",
-    done: false,
-    priority: "high",
-    type: "study",
-    subject: "OS",
-    deadline: Date.now() + 86400000 * 1,
-    pomodoros: 1,
-    at: Date.now(),
-  },
-  {
-    id: "3",
-    text: "Submit DBMS Lab Report",
-    done: true,
-    priority: "medium",
-    type: "lab",
-    subject: "DBMS",
-    deadline: Date.now() - 86400000,
-    pomodoros: 2,
-    at: Date.now(),
-  },
-  {
-    id: "4",
-    text: "CN Mini Project",
-    done: false,
-    priority: "medium",
-    type: "project",
-    subject: "CN",
-    deadline: Date.now() + 86400000 * 7,
-    pomodoros: 0,
-    at: Date.now(),
-  },
-  {
-    id: "5",
-    text: "Revise Maths Unit 2",
-    done: false,
-    priority: "low",
-    type: "study",
-    subject: "Maths",
-    deadline: Date.now() + 86400000 * 3,
-    pomodoros: 0,
-    at: Date.now(),
-  },
-];
-
-const SAMPLE_EXAMS = [
-  {
-    id: "e1",
-    subject: "DSA",
-    date: new Date(Date.now() + 86400000 * 12).toISOString().slice(0, 10),
-    type: "Mid Sem",
-    syllabus: "Trees, Graphs, DP",
-  },
-  {
-    id: "e2",
-    subject: "OS",
-    date: new Date(Date.now() + 86400000 * 18).toISOString().slice(0, 10),
-    type: "End Sem",
-    syllabus: "Memory, Deadlock, Scheduling",
-  },
-  {
-    id: "e3",
-    subject: "Maths",
-    date: new Date(Date.now() + 86400000 * 5).toISOString().slice(0, 10),
-    type: "Quiz",
-    syllabus: "Integration, ODE",
-  },
-];
-
-const SAMPLE_SUBJECTS = [
-  { id: "s1", name: "DSA", credits: 4, attendance: 78, total: 50, present: 39 },
-  { id: "s2", name: "OS", credits: 4, attendance: 82, total: 48, present: 39 },
-  {
-    id: "s3",
-    name: "DBMS",
-    credits: 3,
-    attendance: 91,
-    total: 45,
-    present: 41,
-  },
-  {
-    id: "s4",
-    name: "Maths",
-    credits: 4,
-    attendance: 65,
-    total: 52,
-    present: 34,
-  },
-  { id: "s5", name: "CN", credits: 3, attendance: 74, total: 46, present: 34 },
-];
-
 export function AppProvider({ children }) {
   const [theme, setThemeS] = useState("dark");
   const [tasks, setTasks] = useState([]);
@@ -159,9 +54,9 @@ export function AppProvider({ children }) {
     const cg = localStorage.getItem("gr_cgpa");
     const sm = localStorage.getItem("gr_sem");
     setThemeS(t);
-    setTasks(tk ? JSON.parse(tk) : SAMPLE_TASKS);
-    setExams(ex ? JSON.parse(ex) : SAMPLE_EXAMS);
-    setSubjects(sb ? JSON.parse(sb) : SAMPLE_SUBJECTS);
+    setTasks(tk ? JSON.parse(tk) : []);
+    setExams(ex ? JSON.parse(ex) : []);
+    setSubjects(sb ? JSON.parse(sb) : []);
     setHistory(h ? JSON.parse(h) : {});
     setCgpaGoal(cg ? parseFloat(cg) : 8.5);
     setSem(sm || "Semester 5");
@@ -266,7 +161,6 @@ export function AppProvider({ children }) {
     ? Math.round((doneCount / tasks.length) * 100)
     : 0;
 
-  // upcoming exams sorted
   const upcomingExams = [...exams]
     .map((e) => ({
       ...e,
