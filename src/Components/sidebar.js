@@ -99,6 +99,27 @@ const ITEMS = [
     ),
   },
   {
+    id: "habits",
+    label: "Habit Grid",
+    icon: (
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    ),
+  },
+  {
     id: "notes",
     label: "Notes",
     icon: (
@@ -173,7 +194,6 @@ export default function Sidebar() {
   } = useApp();
   const nextExam = upcomingExams[0];
 
-  // Load profile name
   let profileName = "",
     profileBranch = "",
     profileYear = "";
@@ -184,20 +204,6 @@ export default function Sidebar() {
     profileYear = p.year || "";
   } catch {}
 
-  function minsLabel(mins) {
-    if (!mins) return "";
-    return mins < 60
-      ? `${mins}m`
-      : `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? (mins % 60) + "m" : ""}`;
-  }
-
-  function fmt12(t) {
-    if (!t) return "";
-    const [h, m] = t.split(":").map(Number);
-    return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
-  }
-
-  // Avatar initials + color
   const initials =
     profileName
       .trim()
@@ -219,9 +225,20 @@ export default function Sidebar() {
         avatarColors.length
     ];
 
+  function minsLabel(m) {
+    return m < 60
+      ? `${m}m`
+      : `${Math.floor(m / 60)}h${m % 60 > 0 ? " " + (m % 60) + "m" : ""}`;
+  }
+  function fmt12(t) {
+    if (!t) return "";
+    const [h, m] = t.split(":").map(Number);
+    return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+  }
+
   return (
     <aside className="sidebar">
-      {/* Profile mini card */}
+      {/* Profile */}
       <div
         style={{
           padding: "2px 11px 16px",
@@ -256,7 +273,6 @@ export default function Sidebar() {
               fontSize: 13,
               fontWeight: 700,
               color: "var(--txt)",
-              letterSpacing: "-.01em",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -302,7 +318,6 @@ export default function Sidebar() {
             style={{
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
               marginTop: 2,
             }}
           >
@@ -323,7 +338,7 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Carried over */}
+      {/* Backlog */}
       {carriedCount > 0 && (
         <div
           style={{
@@ -448,7 +463,6 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Nav */}
       <div
         style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}
       >

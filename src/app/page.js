@@ -6,10 +6,10 @@ import TodayView from "@/Components/todayView";
 import ExamView from "@/Components/ExamView";
 import AttendanceView from "@/Components/AttendanceView";
 import TimetableView from "@/Components/Timetableview";
-import MarksView from "@/Components/Marksview";
 import NotesView from "@/Components/Notesview";
 import ProgressView from "@/Components/progressView";
 import SettingsView from "@/Components/settingView";
+import HabitView from "@/Components/Heatmap";
 
 function App() {
   const { view } = useApp();
@@ -21,7 +21,7 @@ function App() {
         {view === "exams" && <ExamView />}
         {view === "attendance" && <AttendanceView />}
         {view === "timetable" && <TimetableView />}
-        {view === "marks" && <MarksView />}
+        {view === "habits" && <HabitView />}
         {view === "notes" && <NotesView />}
         {view === "progress" && <ProgressView />}
         {view === "settings" && <SettingsView />}
