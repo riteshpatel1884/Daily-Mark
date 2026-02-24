@@ -779,7 +779,7 @@ export default function SettingsView() {
             letterSpacing: ".04em",
           }}
         >
-          GradeFlow
+          Daily Mark
         </div>
         <div
           style={{

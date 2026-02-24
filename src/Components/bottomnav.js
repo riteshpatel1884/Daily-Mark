@@ -41,8 +41,8 @@ const ITEMS = [
     ),
   },
   {
-    id: "habits",
-    label: "Habits",
+    id: "heatmap",
+    label: "heatmap",
     icon: (
       <svg
         width="18"

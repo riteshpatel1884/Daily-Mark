@@ -21,7 +21,7 @@ function App() {
         {view === "exams" && <ExamView />}
         {view === "attendance" && <AttendanceView />}
         {view === "timetable" && <TimetableView />}
-        {view === "habits" && <HabitView />}
+        {view === "heatmap" && <HabitView />}
         {view === "notes" && <NotesView />}
         {view === "progress" && <ProgressView />}
         {view === "settings" && <SettingsView />}

@@ -80,8 +80,8 @@ const ITEMS = [
     ),
   },
   {
-    id: "habits",
-    label: "Habit Grid",
+    id: "heatmap",
+    label: "HeatMap",
     icon: (
       <svg
         width="14"
@@ -259,7 +259,7 @@ export default function Sidebar() {
               whiteSpace: "nowrap",
             }}
           >
-            {profileName || "GradeFlow"}
+            {profileName || "Daily Mark"}
           </div>
           <div style={{ fontSize: 10, color: "var(--txt3)" }}>
             {profileBranch && profileYear
