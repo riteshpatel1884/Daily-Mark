@@ -1,4 +1,3 @@
-// app/api/ai-planner/route.js
 import { NextResponse } from "next/server";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -17,12 +16,22 @@ export async function POST(req) {
       sem,
       prefs,
       profile,
+      currentTime,
+      currentTimeFormatted,
     } = body;
 
     // ── Build rich context prompt ──────────────────────────────────────────
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
     const todayName = today.toLocaleDateString("en-US", { weekday: "long" });
+    // Use client-sent time if available, otherwise compute server-side
+    const nowLabel =
+      currentTimeFormatted ||
+      today.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
 
     // Compute attendance risk per subject
     const attendanceWarnings = (subjects || [])
@@ -74,6 +83,8 @@ Always respond ONLY with valid JSON matching the exact schema requested. No mark
 
     const userPrompt = `
 Today: ${todayStr} (${todayName})
+Current Time: ${nowLabel} — IMPORTANT: Only schedule study sessions AFTER this time. Do NOT suggest sessions that have already passed. The earliest session in todayPlan must start at or after ${nowLabel}. You MUST include short breaks (e.g., 10-15 mins) between intense study sessions in the todayPlan (Label the subject as "Break").
+
 Student Profile:
 - Name: ${profile?.name || "Student"}
 - Branch: ${profile?.branch || "CSE"}, ${profile?.year || "3rd Year"}
@@ -105,10 +116,9 @@ Raw history: ${JSON.stringify(histEntries.slice(0, 5).map(([date, v]) => ({ date
 Now generate a complete AI study plan. Return ONLY this exact JSON structure:
 {
   "greeting": "A short, personal 1-line greeting using student's name and a relevant observation about their data",
-  "overallScore": <number 0-100 representing their current academic health>,
   "scoreLabel": "short label like 'At Risk' | 'Needs Work' | 'On Track' | 'Crushing It'",
   "scoreColor": "red|orange|yellow|green",
-  "insights": [
+  "insights":[
     {
       "type": "warning|tip|success|urgent",
       "icon": "⚠️|💡|✅|🔥",
@@ -116,17 +126,17 @@ Now generate a complete AI study plan. Return ONLY this exact JSON structure:
       "body": "2-3 sentences of specific, data-driven insight"
     }
   ],
-  "todayPlan": [
+  "todayPlan":[
     {
       "time": "e.g. 6:00 PM – 7:00 PM",
-      "subject": "subject name",
+      "subject": "subject name (use 'Break' for short breaks)",
       "task": "specific task description",
-      "priority": "high|medium|low",
+      "priority": "high|medium|low|none",
       "pomodoros": <number>,
       "reason": "why this slot/subject now — 1 sentence"
     }
   ],
-  "weekPlan": [
+  "weekPlan":[
     {
       "day": "Monday",
       "date": "YYYY-MM-DD",
@@ -136,7 +146,7 @@ Now generate a complete AI study plan. Return ONLY this exact JSON structure:
       "examAlert": "exam name if within 3 days of this day, else null"
     }
   ],
-  "examStrategy": [
+  "examStrategy":[
     {
       "subject": "subject name",
       "daysLeft": <number>,
@@ -147,7 +157,7 @@ Now generate a complete AI study plan. Return ONLY this exact JSON structure:
     }
   ],
   "attendanceAction": ${attendanceWarnings.length > 0 ? `"Specific action to recover attendance — which classes to not miss"` : "null"},
-  "motivationalNote": "A personalized 2-line push based on their actual data — not generic. Reference their score, streak, or specific subject.",
+  "motivationalNote": "A personalized 2-line push based on their actual data — not generic. Reference their streak, or specific subject.",
   "topPriority": "The single most important thing they should do RIGHT NOW — be specific"
 }`;
 

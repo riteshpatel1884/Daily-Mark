@@ -2,10 +2,39 @@
 import { useState, useCallback } from "react";
 import { useApp } from "@/Components/store";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Parse a time string like "6:00 PM" or "18:00" into minutes since midnight ─
+function parseTimeToMins(timeStr) {
+  if (!timeStr) return 0;
+  // Handle "6:00 PM – 7:00 PM" — take the start part
+  const start = timeStr.split("–")[0].trim();
+  const pmMatch = start.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (pmMatch) {
+    let h = parseInt(pmMatch[1]);
+    const m = parseInt(pmMatch[2]);
+    const ampm = pmMatch[3].toUpperCase();
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  // Handle "18:00"
+  const plainMatch = start.match(/(\d+):(\d+)/);
+  if (plainMatch) return parseInt(plainMatch[1]) * 60 + parseInt(plainMatch[2]);
+  return 0;
+}
+
+// ── Collect everything from localStorage ──────────────────────────────────────
 function collectAllData() {
   try {
     const todayKey = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    // Pass current time so the API builds schedule from NOW
+    const currentTime = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const currentTimeFormatted = now.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
     const tasks = JSON.parse(
       localStorage.getItem("gr_tasks_" + todayKey) || "[]",
     );
@@ -27,95 +56,20 @@ function collectAllData() {
       profile,
       cgpaGoal,
       sem,
+      currentTime,
+      currentTimeFormatted,
     };
   } catch {
     return {};
   }
 }
 
-function ScoreRing({ score, color }) {
-  const colorMap = {
-    red: "#e05252",
-    orange: "#e8924a",
-    yellow: "#d4b44a",
-    green: "#4caf7d",
-  };
-  const hex = colorMap[color] || "#5b8def";
-  const r = 44,
-    c = 2 * Math.PI * r;
-  return (
-    <div
-      style={{ position: "relative", width: 108, height: 108, flexShrink: 0 }}
-    >
-      <svg
-        width="108"
-        height="108"
-        viewBox="0 0 108 108"
-        style={{ transform: "rotate(-90deg)" }}
-      >
-        <circle
-          cx="54"
-          cy="54"
-          r={r}
-          fill="none"
-          stroke="var(--border)"
-          strokeWidth="8"
-        />
-        <circle
-          cx="54"
-          cy="54"
-          r={r}
-          fill="none"
-          stroke={hex}
-          strokeWidth="8"
-          strokeDasharray={`${(score / 100) * c} ${c}`}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 1s ease" }}
-        />
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 22,
-            fontWeight: 800,
-            color: hex,
-            letterSpacing: "-.03em",
-            lineHeight: 1,
-          }}
-        >
-          {score}
-        </div>
-        <div
-          style={{
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: ".06em",
-            textTransform: "uppercase",
-            color: "var(--txt3)",
-            marginTop: 1,
-          }}
-        >
-          score
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// ── Components ────────────────────────────────────────────────────────────────
 function InsightCard({ insight }) {
   const bgMap = {
     warning: "var(--orange)15",
     tip: "var(--blue)12",
-    success: "var(--green, #4caf7d)15",
+    success: "#4caf7d15",
     urgent: "var(--red)15",
   };
   const borderMap = {
@@ -177,8 +131,11 @@ function PriorityBadge({ priority }) {
     high: { bg: "var(--red)18", color: "var(--red)", label: "HIGH" },
     medium: { bg: "var(--orange)18", color: "var(--orange)", label: "MED" },
     low: { bg: "var(--bg4)", color: "var(--txt3)", label: "LOW" },
+    none: { bg: "transparent", color: "transparent", label: "" },
   };
   const s = map[priority] || map.low;
+  if (priority === "none") return null;
+
   return (
     <span
       style={{
@@ -196,19 +153,46 @@ function PriorityBadge({ priority }) {
   );
 }
 
-function TodaySession({ session, idx }) {
+function TodaySession({ session, idx, isNext }) {
+  const isBreak =
+    session.subject?.toLowerCase().includes("break") ||
+    session.task?.toLowerCase().includes("break");
+
   return (
     <div
       style={{
         display: "flex",
         gap: 12,
         padding: "12px 14px",
-        background: "var(--bg2)",
-        border: "1px solid var(--border)",
+        background: isBreak
+          ? "transparent"
+          : isNext
+            ? "var(--blue)10"
+            : "var(--bg2)",
+        border: `1px ${isBreak ? "dashed" : "solid"} ${isNext && !isBreak ? "var(--blue)44" : "var(--border)"}`,
         borderRadius: 13,
         alignItems: "flex-start",
+        position: "relative",
       }}
     >
+      {isNext && !isBreak && (
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 12,
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: ".07em",
+            color: "var(--blue)",
+            background: "var(--blue)18",
+            padding: "2px 7px",
+            borderRadius: 5,
+          }}
+        >
+          UP NEXT
+        </div>
+      )}
       <div
         style={{
           flexShrink: 0,
@@ -224,17 +208,21 @@ function TodaySession({ session, idx }) {
             width: 26,
             height: 26,
             borderRadius: "50%",
-            background: "var(--bg4)",
-            border: "1.5px solid var(--border)",
+            background: isBreak
+              ? "var(--bg3)"
+              : isNext
+                ? "var(--blue)"
+                : "var(--bg4)",
+            border: `1.5px solid ${isBreak ? "var(--border)" : isNext ? "var(--blue)" : "var(--border)"}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 11,
             fontWeight: 800,
-            color: "var(--txt3)",
+            color: isNext && !isBreak ? "#fff" : "var(--txt3)",
           }}
         >
-          {idx + 1}
+          {isBreak ? "☕" : idx + 1}
         </div>
         <div
           style={{
@@ -261,30 +249,40 @@ function TodaySession({ session, idx }) {
               fontFamily: "var(--mono)",
               fontSize: 11,
               fontWeight: 600,
-              color: "var(--txt3)",
+              color: isNext && !isBreak ? "var(--blue)" : "var(--txt3)",
             }}
           >
             {session.time}
           </span>
-          <PriorityBadge priority={session.priority} />
-          <span style={{ fontSize: 11, color: "var(--txt3)" }}>
-            🍅 ×{session.pomodoros}
-          </span>
+          {!isBreak && session.priority && (
+            <PriorityBadge priority={session.priority} />
+          )}
+          {!isBreak && session.pomodoros > 0 && (
+            <span style={{ fontSize: 11, color: "var(--txt3)" }}>
+              🍅 ×{session.pomodoros}
+            </span>
+          )}
         </div>
         <div
           style={{
             fontSize: 14,
             fontWeight: 700,
-            color: "var(--txt)",
+            color: isBreak ? "var(--txt2)" : "var(--txt)",
             marginBottom: 3,
           }}
         >
           {session.subject}
         </div>
-        <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 4 }}>
+        <div
+          style={{
+            fontSize: 13,
+            color: isBreak ? "var(--txt3)" : "var(--txt2)",
+            marginBottom: 4,
+          }}
+        >
           {session.task}
         </div>
-        {session.reason && (
+        {session.reason && !isBreak && (
           <div
             style={{
               fontSize: 11,
@@ -302,12 +300,6 @@ function TodaySession({ session, idx }) {
 }
 
 function WeekDayCard({ day }) {
-  const urgencyColor = {
-    critical: "var(--red)",
-    high: "var(--orange)",
-    medium: "var(--yellow, #d4b44a)",
-    low: "var(--txt3)",
-  };
   const isToday = day.date === new Date().toISOString().slice(0, 10);
   return (
     <div
@@ -497,9 +489,9 @@ function ExamStrategyCard({ exam }) {
         {[
           { label: "Total needed", val: `${exam.hoursNeeded}h` },
           { label: "Daily target", val: `${exam.dailyHours}h/day` },
-        ].map((s) => (
+        ].map((item) => (
           <div
-            key={s.label}
+            key={item.label}
             style={{
               flex: 1,
               background: "var(--bg3)",
@@ -516,10 +508,10 @@ function ExamStrategyCard({ exam }) {
                 fontFamily: "var(--mono)",
               }}
             >
-              {s.val}
+              {item.val}
             </div>
             <div style={{ fontSize: 10, color: "var(--txt3)", marginTop: 1 }}>
-              {s.label}
+              {item.label}
             </div>
           </div>
         ))}
@@ -530,9 +522,6 @@ function ExamStrategyCard({ exam }) {
 
 // ── Main View ─────────────────────────────────────────────────────────────────
 export default function AIPlannerView() {
-  const { tasks, exams, timetable, subjects, history, cgpaGoal, sem } =
-    useApp();
-
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -562,6 +551,20 @@ export default function AIPlannerView() {
     }
   }, []);
 
+  // ── Filter out past sessions client-side as a safety net ──────────────────
+  const nowMins = (() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  })();
+
+  const futureSessions =
+    plan?.todayPlan?.filter((s) => {
+      const sessionMins = parseTimeToMins(s.time);
+      // Keep sessions that start within the next ~15min or in the future
+      // (give 15min buffer so "just started" sessions still show)
+      return sessionMins >= nowMins - 15;
+    }) ?? [];
+
   const colorMap = {
     red: "#e05252",
     orange: "#e8924a",
@@ -577,7 +580,21 @@ export default function AIPlannerView() {
   ];
 
   return (
-    <div className="page">
+    <div
+      className="page"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { from { opacity: 0.4; } to { opacity: 0.8; } }
+        .ai-fadein { animation: fadeUp .35s ease forwards; }
+      `}</style>
+
       {/* ── Header ── */}
       <div
         style={{
@@ -662,8 +679,6 @@ export default function AIPlannerView() {
         </button>
       </div>
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } .ai-fadein { animation: fadeUp .35s ease forwards; }`}</style>
-
       {/* ── Error ── */}
       {error && (
         <div
@@ -684,7 +699,7 @@ export default function AIPlannerView() {
         </div>
       )}
 
-      {/* ── Empty / Loading state ── */}
+      {/* ── Empty state ── */}
       {!plan && !loading && !error && (
         <div style={{ textAlign: "center", padding: "52px 20px" }}>
           <div style={{ fontSize: 48, marginBottom: 14 }}>🧠</div>
@@ -708,7 +723,7 @@ export default function AIPlannerView() {
             }}
           >
             Analyses your tasks, exams, timetable, attendance, and history to
-            generate a fully personalized study plan.
+            build a plan from right now.
           </div>
           <div
             style={{
@@ -721,7 +736,7 @@ export default function AIPlannerView() {
             }}
           >
             {[
-              "📋 Today's optimised schedule",
+              "📋 Schedule from current time",
               "📅 7-day week plan",
               "📝 Per-exam strategies",
               "💡 Data-driven insights",
@@ -757,7 +772,6 @@ export default function AIPlannerView() {
               fontSize: 15,
               fontWeight: 800,
               cursor: "pointer",
-              letterSpacing: "-.01em",
             }}
           >
             Generate My Plan →
@@ -776,8 +790,8 @@ export default function AIPlannerView() {
                 background: "var(--bg3)",
                 borderRadius: 13,
                 marginBottom: 10,
-                opacity: 1 - i * 0.2,
                 animation: "pulse 1.5s ease-in-out infinite alternate",
+                opacity: 1 - i * 0.2,
               }}
             />
           ))}
@@ -789,16 +803,20 @@ export default function AIPlannerView() {
               color: "var(--txt3)",
             }}
           >
-            Analysing your tasks, exams, timetable & history...
+            Building your schedule from{" "}
+            {new Date().toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            ...
           </div>
-          <style>{`@keyframes pulse { from { opacity: 0.4; } to { opacity: 0.8; } }`}</style>
         </div>
       )}
 
       {/* ── Plan output ── */}
       {plan && !loading && (
         <div className="ai-fadein">
-          {/* Score + Greeting */}
+          {/* Greeting card without ScoreRing */}
           <div
             style={{
               display: "flex",
@@ -811,10 +829,6 @@ export default function AIPlannerView() {
               marginBottom: 14,
             }}
           >
-            <ScoreRing
-              score={plan.overallScore || 0}
-              color={plan.scoreColor || "blue"}
-            />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
@@ -822,6 +836,7 @@ export default function AIPlannerView() {
                   alignItems: "center",
                   gap: 8,
                   marginBottom: 6,
+                  flexWrap: "wrap",
                 }}
               >
                 <span
@@ -893,7 +908,7 @@ export default function AIPlannerView() {
           </div>
 
           {/* Attendance Alert */}
-          {plan.attendanceAction && (
+          {plan.attendanceAction && plan.attendanceAction !== "null" && (
             <div
               style={{
                 background: "var(--red)15",
@@ -952,6 +967,21 @@ export default function AIPlannerView() {
                 }}
               >
                 {t.label}
+                {t.id === "today" && futureSessions.length > 0 && (
+                  <span
+                    style={{
+                      marginLeft: 5,
+                      fontSize: 9,
+                      fontWeight: 800,
+                      background: "var(--blue)",
+                      color: "#fff",
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                    }}
+                  >
+                    {futureSessions.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -959,22 +989,77 @@ export default function AIPlannerView() {
           {/* ── TODAY TAB ── */}
           {activeTab === "today" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {plan.todayPlan?.length > 0 ? (
-                plan.todayPlan.map((session, i) => (
-                  <TodaySession key={i} session={session} idx={i} />
-                ))
-              ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 12px",
+                  background: "var(--bg3)",
+                  borderRadius: 9,
+                  marginBottom: 4,
+                }}
+              >
                 <div
                   style={{
-                    textAlign: "center",
-                    padding: "28px 0",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#4caf7d",
+                    boxShadow: "0 0 0 3px #4caf7d30",
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 12,
                     color: "var(--txt3)",
-                    fontSize: 13,
+                    fontFamily: "var(--mono)",
                   }}
                 >
-                  No sessions scheduled for today
+                  Now:{" "}
+                  {new Date().toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--txt3)" }}>·</span>
+                <span style={{ fontSize: 12, color: "var(--txt2)" }}>
+                  {futureSessions.length > 0
+                    ? `${futureSessions.length} session${futureSessions.length > 1 ? "s" : ""} remaining today`
+                    : "No more sessions for today"}
+                </span>
+              </div>
+
+              {futureSessions.length > 0 ? (
+                futureSessions.map((session, i) => (
+                  <TodaySession
+                    key={i}
+                    session={session}
+                    idx={i}
+                    isNext={i === 0}
+                  />
+                ))
+              ) : (
+                <div style={{ textAlign: "center", padding: "32px 0" }}>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>✅</div>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "var(--txt)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    You're done for today!
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--txt3)" }}>
+                    No more study sessions scheduled. Rest up or regenerate for
+                    tomorrow.
+                  </div>
                 </div>
               )}
+
               {plan.motivationalNote && (
                 <div
                   style={{
@@ -1057,7 +1142,7 @@ export default function AIPlannerView() {
             </div>
           )}
 
-          {/* Regenerate footer */}
+          {/* Footer */}
           <div
             style={{
               textAlign: "center",

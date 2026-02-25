@@ -307,7 +307,7 @@ export default function ProgressView() {
         </div>
       )}
 
-      {/* AI Planner CTA — replaces the old static tip */}
+      {/* AI Planner CTA */}
       <button
         onClick={() => setView("ai-planner")}
         style={{
