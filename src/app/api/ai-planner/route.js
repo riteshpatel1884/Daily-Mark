@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.3-70b-versatile"; // fast + smart
+// Using Google Gemini's OpenAI-compatible endpoint
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const GEMINI_MODEL = "gemini-1.5-flash"; // extremely fast and huge limits
 
 export async function POST(req) {
   try {
@@ -20,11 +22,9 @@ export async function POST(req) {
       currentTimeFormatted,
     } = body;
 
-    // ── Build rich context prompt ──────────────────────────────────────────
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
     const todayName = today.toLocaleDateString("en-US", { weekday: "long" });
-    // Use client-sent time if available, otherwise compute server-side
     const nowLabel =
       currentTimeFormatted ||
       today.toLocaleTimeString("en-US", {
@@ -33,7 +33,6 @@ export async function POST(req) {
         hour12: true,
       });
 
-    // Compute attendance risk per subject
     const attendanceWarnings = (subjects || [])
       .filter((s) => (s.attendance || 100) < (prefs?.attendanceThreshold || 75))
       .map(
@@ -41,11 +40,9 @@ export async function POST(req) {
           `${s.name}: ${s.attendance}% (below ${prefs?.attendanceThreshold || 75}% threshold)`,
       );
 
-    // Pending tasks breakdown
     const pendingTasks = (tasks || []).filter((t) => !t.done);
     const doneTasks = (tasks || []).filter((t) => t.done);
 
-    // Exams in next 30 days
     const urgentExams = (exams || [])
       .map((e) => ({
         ...e,
@@ -54,7 +51,6 @@ export async function POST(req) {
       .filter((e) => e.daysLeft >= 0 && e.daysLeft <= 30)
       .sort((a, b) => a.daysLeft - b.daysLeft);
 
-    // Compute 7-day avg completion rate from history
     const histEntries = Object.entries(history || {})
       .sort(([a], [b]) => b.localeCompare(a))
       .slice(0, 7);
@@ -66,7 +62,6 @@ export async function POST(req) {
           )
         : 0;
 
-    // Today's timetable
     const todaySlots = (timetable[todayName] || [])
       .sort((a, b) => a.startTime.localeCompare(b.startTime))
       .map(
@@ -74,56 +69,45 @@ export async function POST(req) {
           `${s.startTime}–${s.endTime}: ${s.subject}${s.room ? " (" + s.room + ")" : ""}`,
       );
 
-    // Build the system + user prompt
     const systemPrompt = `You are an intelligent academic coach for a BTech engineering student in India.
-You deeply understand the pressures of engineering college — CGPA anxiety, attendance rules, exam cramming, and procrastination.
 Your job is to give brutally honest, highly personalized, actionable study plans and advice.
-Be direct, specific, and motivating — not generic. Speak like a smart senior who actually cares.
 Always respond ONLY with valid JSON matching the exact schema requested. No markdown, no prose outside JSON.`;
 
     const userPrompt = `
 Today: ${todayStr} (${todayName})
-Current Time: ${nowLabel} — IMPORTANT: Only schedule study sessions AFTER this time. Do NOT suggest sessions that have already passed. The earliest session in todayPlan must start at or after ${nowLabel}. You MUST include short breaks (e.g., 10-15 mins) between intense study sessions in the todayPlan (Label the subject as "Break").
+Current Time: ${nowLabel} — IMPORTANT: Only schedule study sessions AFTER this time. Do NOT suggest sessions that have already passed. You MUST include short breaks (e.g., 10-15 mins) labeled as "Break".
 
 Student Profile:
 - Name: ${profile?.name || "Student"}
-- Branch: ${profile?.branch || "CSE"}, ${profile?.year || "3rd Year"}
-- Semester: ${sem}
 - CGPA Goal: ${cgpaGoal}/10
-- Study Mode: ${prefs?.studyMode || "Balanced"}
-- Attendance Threshold: ${prefs?.attendanceThreshold || 75}%
 
 Performance Summary:
 - Today's tasks: ${doneTasks.length} done / ${(tasks || []).length} total
-- 7-day avg completion rate: ${avgCompletion}%
 - Pending tasks today: ${pendingTasks.length}
 
 Today's Classes:
 ${todaySlots.length > 0 ? todaySlots.join("\n") : "No classes today"}
 
 Upcoming Exams (next 30 days):
-${urgentExams.length > 0 ? urgentExams.map((e) => `- ${e.subject} (${e.type}): ${e.daysLeft} days away${e.syllabus ? " | Topics: " + e.syllabus : ""}`).join("\n") : "No exams in next 30 days"}
+${urgentExams.length > 0 ? urgentExams.map((e) => `- ${e.subject}: ${e.daysLeft} days away`).join("\n") : "None"}
 
 Pending Tasks:
-${pendingTasks.length > 0 ? pendingTasks.map((t) => `- [${t.type || "study"}] ${t.title || t.text || "Task"}`).join("\n") : "No pending tasks"}
+${pendingTasks.length > 0 ? pendingTasks.map((t) => `- ${t.title || t.text || "Task"}`).join("\n") : "None"}
 
 Attendance Risks:
-${attendanceWarnings.length > 0 ? attendanceWarnings.join("\n") : "All subjects above threshold"}
-
-Subject History (last 7 days avg): ${avgCompletion}%
-Raw history: ${JSON.stringify(histEntries.slice(0, 5).map(([date, v]) => ({ date, rate: v.rate, done: v.done, total: v.total })))}
+${attendanceWarnings.length > 0 ? attendanceWarnings.join("\n") : "None"}
 
 Now generate a complete AI study plan. Return ONLY this exact JSON structure:
 {
-  "greeting": "A short, personal 1-line greeting using student's name and a relevant observation about their data",
-  "scoreLabel": "short label like 'At Risk' | 'Needs Work' | 'On Track' | 'Crushing It'",
+  "greeting": "A short, personal 1-line greeting",
+  "scoreLabel": "short label like 'At Risk' | 'Needs Work' | 'On Track'",
   "scoreColor": "red|orange|yellow|green",
   "insights":[
     {
       "type": "warning|tip|success|urgent",
       "icon": "⚠️|💡|✅|🔥",
       "title": "short title",
-      "body": "2-3 sentences of specific, data-driven insight"
+      "body": "1 sentence insight"
     }
   ],
   "todayPlan":[
@@ -132,43 +116,43 @@ Now generate a complete AI study plan. Return ONLY this exact JSON structure:
       "subject": "subject name (use 'Break' for short breaks)",
       "task": "specific task description",
       "priority": "high|medium|low|none",
-      "pomodoros": <number>,
-      "reason": "why this slot/subject now — 1 sentence"
+      "pomodoros": 2,
+      "reason": "1 sentence reason"
     }
   ],
   "weekPlan":[
     {
       "day": "Monday",
       "date": "YYYY-MM-DD",
-      "focus": "main subject/theme for the day",
-      "sessions": <number of study sessions>,
-      "keyTask": "the most important thing to do this day",
-      "examAlert": "exam name if within 3 days of this day, else null"
+      "focus": "main subject",
+      "sessions": 2,
+      "keyTask": "key task",
+      "examAlert": "exam name if within 3 days else null"
     }
   ],
   "examStrategy":[
     {
       "subject": "subject name",
-      "daysLeft": <number>,
-      "hoursNeeded": <number>,
-      "dailyHours": <number>,
-      "strategy": "2-sentence study strategy specific to this exam and syllabus",
+      "daysLeft": 5,
+      "hoursNeeded": 10,
+      "dailyHours": 2,
+      "strategy": "2-sentence study strategy",
       "urgency": "critical|high|medium|low"
     }
   ],
-  "attendanceAction": ${attendanceWarnings.length > 0 ? `"Specific action to recover attendance — which classes to not miss"` : "null"},
-  "motivationalNote": "A personalized 2-line push based on their actual data — not generic. Reference their streak, or specific subject.",
-  "topPriority": "The single most important thing they should do RIGHT NOW — be specific"
+  "attendanceAction": ${attendanceWarnings.length > 0 ? `"Action to recover attendance"` : "null"},
+  "motivationalNote": "A 1-line push",
+  "topPriority": "The single most important thing to do NOW"
 }`;
 
-    const groqRes = await fetch(GROQ_API_URL, {
+    const response = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: GEMINI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -179,17 +163,17 @@ Now generate a complete AI study plan. Return ONLY this exact JSON structure:
       }),
     });
 
-    if (!groqRes.ok) {
-      const err = await groqRes.text();
-      console.error("Groq error:", err);
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Gemini error:", err);
       return NextResponse.json(
         { error: "AI service error", details: err },
         { status: 500 },
       );
     }
 
-    const groqData = await groqRes.json();
-    const raw = groqData.choices?.[0]?.message?.content;
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content;
 
     if (!raw) {
       return NextResponse.json(

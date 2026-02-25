@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+// Using Google Gemini's OpenAI-compatible endpoint
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const GEMINI_MODEL = "gemini-1.5-flash";
 
 export async function POST(req) {
   try {
@@ -48,34 +50,31 @@ Got it! I have added Machine Learning from 12:00 AM to 1:00 AM, added a short br
 
 Make sure the JSON array inside the tags contains their ENTIRE schedule for the rest of the day, reflecting the changes requested. If they don't ask to modify the plan, just answer them normally without the tags.`;
 
-    const groqRes = await fetch(GROQ_API_URL, {
+    const response = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages, // Append history of user/assistant messages
-        ],
+        model: GEMINI_MODEL,
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
         temperature: 0.7,
         max_tokens: 1500,
       }),
     });
 
-    if (!groqRes.ok) {
-      const err = await groqRes.text();
-      console.error("Groq chat error:", err);
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Gemini chat error:", err);
       return NextResponse.json(
         { error: "AI service error", details: err },
         { status: 500 },
       );
     }
 
-    const groqData = await groqRes.json();
-    const reply = groqData.choices?.[0]?.message?.content;
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content;
 
     if (!reply) {
       return NextResponse.json(
