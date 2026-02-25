@@ -153,14 +153,12 @@ function Swatch({ color, icon }) {
 function OnboardingModal({ onConfirm }) {
   const today = todayStr();
   const [startDate, setStartDate] = useState(today);
-
   const thisMonday = (() => {
     const d = new Date();
     const day = d.getDay();
     d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
     return d.toISOString().slice(0, 10);
   })();
-
   const opts = [
     { label: "Today", value: today },
     { label: "Yesterday", value: offsetDate(-1) },
@@ -800,7 +798,6 @@ function WeeklySummaryModal({
     [],
   );
   const validDays = allDays.filter((d) => d >= trackingStartDate && d <= today);
-
   const activeDays = validDays.filter((d) =>
     cols.some((c) => records[`${d}:${c.id}`] === "done"),
   ).length;
@@ -809,7 +806,6 @@ function WeeklySummaryModal({
       acc + cols.filter((c) => records[`${d}:${c.id}`] === "done").length,
     0,
   );
-
   const subjectRates = cols
     .map((col) => {
       const done = validDays.filter(
@@ -824,7 +820,6 @@ function WeeklySummaryModal({
       };
     })
     .sort((a, b) => b.rate - a.rate);
-
   const dayScores = allDays
     .map((d) => ({
       d,
@@ -836,7 +831,6 @@ function WeeklySummaryModal({
       untracked: d < trackingStartDate || d > today,
     }))
     .sort((a, b) => (b.score || 0) - (a.score || 0));
-
   const bestDay = dayScores.find((x) => x.score > 0);
 
   return (
@@ -882,7 +876,7 @@ function WeeklySummaryModal({
         >
           {[
             {
-              label: `Active Days`,
+              label: "Active Days",
               val: `${activeDays}/${validDays.length}`,
               color:
                 activeDays >= Math.ceil(validDays.length * 0.7)
@@ -1110,6 +1104,8 @@ function WeeklySummaryModal({
 
 // ─── MAIN VIEW ────────────────────────────────────────────────────────────────
 const KEY = "gr_heatmap_v3";
+// Compact date col — saves horizontal space for subject columns
+const DATE_COL_W = 72;
 
 export default function HabitView() {
   const [loaded, setLoaded] = useState(false);
@@ -1127,6 +1123,7 @@ export default function HabitView() {
   const [noteCell, setNoteCell] = useState(null);
   const [range, setRange] = useState(30);
 
+  // ── Load from localStorage ──────────────────────────────────────────────────
   useEffect(() => {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
@@ -1142,7 +1139,7 @@ export default function HabitView() {
     setLoaded(true);
   }, []);
 
-  // Auto-mark missed — only from trackingStartDate onward
+  // ── Auto-mark missed ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!trackingStartDate) return;
     const today = todayStr();
@@ -1162,7 +1159,7 @@ export default function HabitView() {
     });
   }, [trackingStartDate, cols, lastAutoMarkDate]);
 
-  // Weekly summary on Sundays
+  // ── Weekly summary on Sundays ───────────────────────────────────────────────
   useEffect(() => {
     if (!trackingStartDate) return;
     if (new Date().getDay() !== 0) return;
@@ -1277,9 +1274,8 @@ export default function HabitView() {
     for (let i = 0; i < 60; i++) {
       const ds = offsetDate(-i);
       if (trackingStartDate && ds < trackingStartDate) return null;
-      if (records[`${ds}:${colId}`] === "done") {
+      if (records[`${ds}:${colId}`] === "done")
         return i === 0 ? "today" : i === 1 ? "yesterday" : `${i}d ago`;
-      }
     }
     return null;
   }
@@ -1320,17 +1316,33 @@ export default function HabitView() {
       : 0;
   const consistency = getConsistencyMessage(overallRate);
   const penaltySubjects = cols.filter((col) => consecutiveMissed(col.id) >= 3);
-  const cellW = range === 7 ? 40 : range === 14 ? 34 : 28;
   const activePreset = PRESET_PALETTES.find(
     (p) => p.done === doneColor && p.undone === undoneColor,
   );
+
+  // Cell square size — slightly smaller so subject cols fill table width nicely
+  const cellSq = range === 7 ? 38 : range === 14 ? 34 : 30;
 
   if (!loaded) return null;
   if (!trackingStartDate) return <OnboardingModal onConfirm={confirmStart} />;
 
   return (
-    <div className="page">
-      {/* Header */}
+    /*
+     * WIDTH NOTE:
+     * The .page wrapper here intentionally has no max-width so it fills whatever
+     * space the sidebar layout gives it.  Padding is kept tight (16px each side)
+     * so the grid touches the edges cleanly.
+     */
+    <div
+      className="page"
+      style={{
+        maxWidth: "100%",
+        width: "100%",
+        padding: "20px 16px",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* ── Header ── */}
       <div
         style={{
           display: "flex",
@@ -1619,29 +1631,42 @@ export default function HabitView() {
         ))}
       </div>
 
-      {/* ── GRID ── */}
+      {/* ══ GRID ══
+          Key layout choices:
+          - tableLayout: "fixed" so the browser honours <col> widths
+          - Date col: compact fixed width (DATE_COL_W)
+          - Subject cols: auto — browser divides remaining width equally
+            so more columns = narrower but none are truncated; text wraps
+      */}
       <div
         style={{
           overflowX: "auto",
           borderRadius: 14,
           border: "1px solid var(--border)",
           background: "var(--bg2)",
+          width: "100%",
         }}
       >
         <table
           style={{
             borderCollapse: "collapse",
             width: "100%",
-            minWidth: cols.length * cellW + 180,
+            tableLayout: "fixed",
+            minWidth: DATE_COL_W + cols.length * (cellSq + 10),
           }}
         >
+          <colgroup>
+            <col style={{ width: DATE_COL_W, minWidth: DATE_COL_W }} />
+            {cols.map((col) => (
+              <col key={col.id} />
+            ))}
+          </colgroup>
+
           <thead>
             <tr>
               <th
                 style={{
-                  width: 96,
-                  minWidth: 96,
-                  padding: "10px 12px",
+                  padding: "10px 6px 10px 12px",
                   textAlign: "left",
                   fontSize: 10,
                   fontWeight: 700,
@@ -1668,13 +1693,12 @@ export default function HabitView() {
                   <th
                     key={col.id}
                     style={{
-                      padding: "8px 2px 6px",
+                      padding: "8px 4px 6px",
                       textAlign: "center",
                       background: "var(--bg3)",
                       borderBottom: "1px solid var(--border)",
                       borderRight: "1px solid var(--border)",
-                      minWidth: cellW,
-                      width: cellW,
+                      overflow: "hidden",
                     }}
                   >
                     <div
@@ -1685,16 +1709,17 @@ export default function HabitView() {
                         gap: 2,
                       }}
                     >
+                      {/* Subject name — wraps, no truncation */}
                       <div
                         style={{
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: 700,
                           color: penalty ? undoneColor : "var(--txt)",
-                          letterSpacing: ".02em",
-                          maxWidth: cellW - 4,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          wordBreak: "break-word",
+                          whiteSpace: "normal",
+                          textAlign: "center",
+                          lineHeight: 1.25,
+                          padding: "0 2px",
                         }}
                       >
                         {col.label}
@@ -1845,33 +1870,39 @@ export default function HabitView() {
                     opacity: beforeStart ? 0.38 : 1,
                   }}
                 >
+                  {/* ── Date cell: two-line compact ── */}
                   <td
                     style={{
-                      padding: "4px 8px 4px 12px",
+                      padding: "3px 4px 3px 10px",
                       borderRight: "1px solid var(--border)",
                       borderBottom: "1px solid var(--border)",
                       position: "sticky",
                       left: 0,
                       zIndex: 1,
-                      whiteSpace: "nowrap",
                       background: beforeStart ? "var(--bg)" : rowBg,
                     }}
                   >
-                    <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0,
+                      }}
+                    >
                       <span
                         style={{
                           fontFamily: "var(--mono)",
                           fontSize: 11,
                           fontWeight: isToday ? 700 : 400,
                           color: isToday ? "var(--txt)" : "var(--txt2)",
+                          lineHeight: 1.3,
                         }}
                       >
                         {fmtDate(dateStr)}
                       </span>
                       <span
                         style={{
-                          fontSize: 10,
-                          marginLeft: 5,
+                          fontSize: 9,
                           fontWeight: isToday ? 700 : isYesterday ? 600 : 400,
                           color: beforeStart
                             ? "var(--txt3)"
@@ -1882,18 +1913,20 @@ export default function HabitView() {
                                 : isWeekend
                                   ? "var(--txt2)"
                                   : "var(--txt3)",
+                          lineHeight: 1.2,
                         }}
                       >
                         {beforeStart
-                          ? "before start"
+                          ? "before"
                           : isToday
                             ? "Today"
                             : isYesterday
-                              ? "Yesterday ✏️"
+                              ? "Yest ✏️"
                               : dayName}
                       </span>
                     </div>
                   </td>
+
                   {cols.map((col) => {
                     const k = `${dateStr}:${col.id}`,
                       status = records[k],
@@ -1911,7 +1944,7 @@ export default function HabitView() {
                       <td
                         key={col.id}
                         style={{
-                          padding: 3,
+                          padding: "3px 2px",
                           textAlign: "center",
                           borderRight: "1px solid var(--border)",
                           borderBottom: "1px solid var(--border)",
@@ -1921,8 +1954,8 @@ export default function HabitView() {
                         {beforeStart ? (
                           <div
                             style={{
-                              width: cellW - 6,
-                              height: cellW - 6,
+                              width: cellSq,
+                              height: cellSq,
                               borderRadius: 5,
                               background: "transparent",
                               border: "1px solid var(--border)",
@@ -1932,7 +1965,7 @@ export default function HabitView() {
                               justifyContent: "center",
                             }}
                           >
-                            <span style={{ fontSize: 8, color: "var(--txt3)" }}>
+                            <span style={{ fontSize: 7, color: "var(--txt3)" }}>
                               –
                             </span>
                           </div>
@@ -1955,8 +1988,8 @@ export default function HabitView() {
                                       : "Tap to mark as studied"
                               }
                               style={{
-                                width: cellW - 6,
-                                height: cellW - 6,
+                                width: cellSq,
+                                height: cellSq,
                                 borderRadius: 5,
                                 background: bg,
                                 border: isToday
@@ -2044,7 +2077,7 @@ export default function HabitView() {
                                   background: hasNote
                                     ? "#f59e0b"
                                     : "var(--bg4)",
-                                  border: `1.5px solid var(--bg2)`,
+                                  border: "1.5px solid var(--bg2)",
                                   cursor: "pointer",
                                   zIndex: 1,
                                   transition: "transform .1s",
@@ -2072,7 +2105,7 @@ export default function HabitView() {
             <tr>
               <td
                 style={{
-                  padding: "8px 12px",
+                  padding: "8px 6px 8px 12px",
                   fontSize: 10,
                   fontWeight: 700,
                   letterSpacing: ".06em",

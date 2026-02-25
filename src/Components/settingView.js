@@ -2,6 +2,22 @@
 import { useState, useEffect } from "react";
 import { useApp } from "@/Components/store";
 
+// ── SHARED avatar color palette (must match Sidebar.jsx exactly) ──
+const AVATAR_COLORS = [
+  "#5b8def",
+  "#9b72cf",
+  "#4caf7d",
+  "#e8924a",
+  "#d46fa0",
+  "#d4b44a",
+];
+function getAvatarColor(name) {
+  return AVATAR_COLORS[
+    name.split("").reduce((s, c) => s + c.charCodeAt(0), 0) %
+      AVATAR_COLORS.length
+  ];
+}
+
 const THEMES = [
   {
     id: "dark",
@@ -51,25 +67,14 @@ function Avatar({ name, size = 64 }) {
       .map((w) => w[0]?.toUpperCase() || "")
       .slice(0, 2)
       .join("") || "?";
-  // deterministic color from name
-  const colors = [
-    "#5b8def",
-    "#9b72cf",
-    "#4caf7d",
-    "#e8924a",
-    "#d46fa0",
-    "#d4b44a",
-    "#e05252",
-  ];
-  const idx =
-    name.split("").reduce((s, c) => s + c.charCodeAt(0), 0) % colors.length;
+  const color = getAvatarColor(name);
   return (
     <div
       style={{
         width: size,
         height: size,
         borderRadius: "50%",
-        background: colors[idx],
+        background: color,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -86,25 +91,13 @@ function Avatar({ name, size = 64 }) {
 }
 
 export default function SettingsView() {
-  const {
-    theme,
-    setTheme,
-    tasks,
-    doneCount,
-    progress,
-    cgpaGoal,
-    setCgpaGoal,
-    sem,
-    setSem,
-  } = useApp();
-  const totalPomos = tasks.reduce((s, t) => s + (t.pomodoros || 0), 0);
+  const { theme, setTheme, cgpaGoal, setCgpaGoal, sem, setSem } = useApp();
 
   // Profile state
   const [name, setName] = useState("");
   const [college, setCollege] = useState("");
   const [branch, setBranch] = useState("CSE");
   const [year, setYear] = useState("2nd Year");
-  const [rollNo, setRollNo] = useState("");
   const [profileLinks, setProfileLinks] = useState({
     github: "",
     linkedin: "",
@@ -112,6 +105,8 @@ export default function SettingsView() {
   });
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+
+  const [attendanceThreshold, setAttendanceThreshold] = useState(75);
 
   // Load profile from localStorage
   useEffect(() => {
@@ -121,18 +116,33 @@ export default function SettingsView() {
       setCollege(p.college || "");
       setBranch(p.branch || "CSE");
       setYear(p.year || "2nd Year");
-      setRollNo(p.rollNo || "");
       setProfileLinks(p.links || { github: "", linkedin: "", leetcode: "" });
-      if (!p.name) setEditingProfile(true); // first time — open editor
+      if (!p.name) setEditingProfile(true);
+
+      const prefs = JSON.parse(localStorage.getItem("gr_prefs") || "{}");
+      setStudyMode(prefs.studyMode || "Balanced");
+      setPomoDuration(prefs.pomoDuration || 25);
+      setShortBreak(prefs.shortBreak || 5);
+      setLongBreak(prefs.longBreak || 15);
+      setNotifications(prefs.notifications || "All");
+      setWeekStart(prefs.weekStart || "Monday");
+      setAttendanceThreshold(prefs.attendanceThreshold || 75);
     } catch {}
   }, []);
 
   function saveProfile() {
-    const p = { name, college, branch, year, rollNo, links: profileLinks };
+    const p = { name, college, branch, year, links: profileLinks };
     localStorage.setItem("gr_profile", JSON.stringify(p));
     setEditingProfile(false);
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 2000);
+  }
+
+  function savePrefs(patch) {
+    try {
+      const prefs = JSON.parse(localStorage.getItem("gr_prefs") || "{}");
+      localStorage.setItem("gr_prefs", JSON.stringify({ ...prefs, ...patch }));
+    } catch {}
   }
 
   function clearDone() {
@@ -226,6 +236,42 @@ export default function SettingsView() {
     window.open(full, "_blank");
   }
 
+  // Reusable row style
+  const setrow = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    background: "var(--bg2)",
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    padding: "13px 16px",
+  };
+
+  const numInput = {
+    width: 64,
+    background: "var(--bg3)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "6px 10px",
+    fontFamily: "var(--mono)",
+    fontSize: 13,
+    color: "var(--txt)",
+    outline: "none",
+    textAlign: "center",
+  };
+
+  const selectStyle = {
+    background: "var(--bg3)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "6px 10px",
+    fontFamily: "var(--font)",
+    fontSize: 12,
+    color: "var(--txt)",
+    outline: "none",
+    cursor: "pointer",
+  };
+
   return (
     <div className="page">
       <h1
@@ -290,18 +336,6 @@ export default function SettingsView() {
                     }}
                   >
                     {college}
-                  </div>
-                )}
-                {rollNo && (
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "var(--txt3)",
-                      fontFamily: "var(--mono)",
-                      marginTop: 2,
-                    }}
-                  >
-                    #{rollNo}
                   </div>
                 )}
               </div>
@@ -400,7 +434,6 @@ export default function SettingsView() {
               </div>
             </div>
 
-            {/* Basic info */}
             <div
               style={{
                 display: "grid",
@@ -451,16 +484,6 @@ export default function SettingsView() {
                     <option key={y}>{y}</option>
                   ))}
                 </select>
-              </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <div className="slabel">Roll Number</div>
-                <input
-                  value={rollNo}
-                  onChange={(e) => setRollNo(e.target.value)}
-                  placeholder="e.g. 21CSE0123"
-                  className="inp"
-                  style={{ fontFamily: "var(--mono)", fontSize: 14 }}
-                />
               </div>
             </div>
 
@@ -514,7 +537,6 @@ export default function SettingsView() {
                   fontSize: 14,
                   fontWeight: 700,
                   cursor: "pointer",
-                  position: "relative",
                 }}
               >
                 {profileSaved ? "✓ Saved!" : "Save Profile"}
@@ -594,7 +616,7 @@ export default function SettingsView() {
           Academic
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div className="setrow">
+          <div style={setrow}>
             <div>
               <div
                 style={{ fontSize: 14, fontWeight: 500, color: "var(--txt)" }}
@@ -611,24 +633,14 @@ export default function SettingsView() {
                 setSem(e.target.value);
                 localStorage.setItem("gr_sem", e.target.value);
               }}
-              style={{
-                background: "var(--bg3)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: "6px 10px",
-                fontFamily: "var(--font)",
-                fontSize: 12,
-                color: "var(--txt)",
-                outline: "none",
-                cursor: "pointer",
-              }}
+              style={selectStyle}
             >
               {SEMS.map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
           </div>
-          <div className="setrow">
+          <div style={setrow}>
             <div>
               <div
                 style={{ fontSize: 14, fontWeight: 500, color: "var(--txt)" }}
@@ -651,57 +663,39 @@ export default function SettingsView() {
                   setCgpaGoal(v);
                   localStorage.setItem("gr_cgpa", v);
                 }}
-                style={{
-                  width: 64,
-                  background: "var(--bg3)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  padding: "6px 10px",
-                  fontFamily: "var(--mono)",
-                  fontSize: 13,
-                  color: "var(--txt)",
-                  outline: "none",
-                  textAlign: "center",
-                }}
+                style={numInput}
               />
               <span style={{ fontSize: 12, color: "var(--txt3)" }}>/10</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── TODAY STATS ── */}
-      <div style={{ marginBottom: 24 }}>
-        <div className="slabel" style={{ marginBottom: 10 }}>
-          Today
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {[
-            { label: "Tasks done", val: `${doneCount}/${tasks.length}` },
-            { label: "Completion", val: `${progress}%` },
-            {
-              label: "Pomodoros done",
-              val: `🍅 ${totalPomos} (${totalPomos * 25}min focus)`,
-            },
-          ].map((r) => (
-            <div key={r.label} className="setrow">
-              <span
+          <div style={setrow}>
+            <div>
+              <div
                 style={{ fontSize: 14, fontWeight: 500, color: "var(--txt)" }}
               >
-                {r.label}
-              </span>
-              <span
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "var(--txt)",
-                  fontFamily: "var(--mono)",
-                }}
-              >
-                {r.val}
-              </span>
+                Attendance Threshold
+              </div>
+              <div style={{ fontSize: 12, color: "var(--txt3)", marginTop: 1 }}>
+                Minimum % to maintain
+              </div>
             </div>
-          ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="number"
+                min={50}
+                max={100}
+                step={1}
+                value={attendanceThreshold}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  setAttendanceThreshold(v);
+                  savePrefs({ attendanceThreshold: v });
+                }}
+                style={numInput}
+              />
+              <span style={{ fontSize: 12, color: "var(--txt3)" }}>%</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -711,7 +705,7 @@ export default function SettingsView() {
           Data
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div className="setrow">
+          <div style={setrow}>
             <div>
               <div
                 style={{ fontSize: 14, fontWeight: 500, color: "var(--txt)" }}
@@ -739,7 +733,7 @@ export default function SettingsView() {
               Clear
             </button>
           </div>
-          <div className="setrow">
+          <div style={setrow}>
             <div>
               <div
                 style={{ fontSize: 14, fontWeight: 500, color: "var(--red)" }}

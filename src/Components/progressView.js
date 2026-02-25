@@ -87,7 +87,7 @@ function Bar({ label, value, isToday }) {
 }
 
 export default function ProgressView() {
-  const { tasks, doneCount, progress, history, subjects } = useApp();
+  const { tasks, doneCount, progress, history, subjects, setView } = useApp();
 
   const today = new Date();
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -102,7 +102,6 @@ export default function ProgressView() {
     };
   });
 
-  const totalDays = Object.keys(history).length + 1;
   const allRates = [...Object.values(history).map((h) => h.rate), progress];
   const avgRate = Math.round(
     allRates.reduce((s, v) => s + v, 0) / allRates.length,
@@ -125,7 +124,6 @@ export default function ProgressView() {
   const totalPomos = tasks.reduce((s, t) => s + (t.pomodoros || 0), 0);
   const focusMins = totalPomos * 25;
 
-  // by type
   const byType = {};
   tasks.forEach((t) => {
     const tp = t.type || "other";
@@ -134,7 +132,6 @@ export default function ProgressView() {
     if (t.done) byType[tp].done++;
   });
 
-  // avg attendance
   const avgAttend = subjects.length
     ? Math.round(
         subjects.reduce((s, sub) => s + (sub.attendance || 0), 0) /
@@ -310,38 +307,61 @@ export default function ProgressView() {
         </div>
       )}
 
-      {/* Productivity tip */}
-      <div
+      {/* AI Planner CTA — replaces the old static tip */}
+      <button
+        onClick={() => setView("ai-planner")}
         style={{
-          background: "var(--blue)15",
+          width: "100%",
+          textAlign: "left",
+          background: "var(--blue)12",
           border: "1px solid var(--blue)33",
           borderRadius: 14,
-          padding: 14,
+          padding: 16,
           marginBottom: 8,
+          cursor: "pointer",
+          transition: "background .15s",
         }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.background = "var(--blue)20")
+        }
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.background = "var(--blue)12")
+        }
       >
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: ".07em",
-            textTransform: "uppercase",
-            color: "var(--blue)",
-            marginBottom: 5,
-          }}
-        >
-          💡 Study Tip
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 28 }}>🧠</div>
+          <div>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "var(--blue)",
+                marginBottom: 3,
+              }}
+            >
+              Want a smarter plan?
+            </div>
+            <div
+              style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.5 }}
+            >
+              Open AI Planner → get a personalised today schedule, exam
+              strategies, and insights based on your actual data.
+            </div>
+          </div>
+          <svg
+            style={{ flexShrink: 0, marginLeft: "auto" }}
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--blue)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
+            <path d="M9 18l6-6-6-6" />
+          </svg>
         </div>
-        <div style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.5 }}>
-          {streak >= 7
-            ? "Amazing 7+ day streak! You're in peak momentum. Keep it going!"
-            : streak >= 3
-              ? `Great ${streak}-day streak! Consistency is key to academic success.`
-              : avgRate >= 80
-                ? "High completion rate! Try using Pomodoro sessions to maintain focus."
-                : "Try the 🍅 Pomodoro technique: 25 min focus + 5 min break. It's proven for studying."}
-        </div>
-      </div>
+      </button>
     </div>
   );
 }

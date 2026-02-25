@@ -51,23 +51,26 @@ export const DAYS = [
 export const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function AppProvider({ children }) {
-  const [theme, setThemeS] = useState("dark");
+  // ── CHANGE 1: default theme is now "white" ──────────────────────────────────
+  const [theme, setThemeS] = useState("white");
   const [tasks, setTasks] = useState([]);
   const [exams, setExams] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  const [timetable, setTimetable] = useState({}); // { 'Monday': [{id,subject,time,room}] }
-  const [notes, setNotes] = useState({}); // { subjectId: 'text' }
-  const [marks, setMarks] = useState([]); // [{id,subject,internals:{scored,total},assignment:{scored,total},practical:{scored,total},endSem:{scored,total}}]
+  const [timetable, setTimetable] = useState({});
+  const [notes, setNotes] = useState({});
+  const [marks, setMarks] = useState([]);
   const [history, setHistory] = useState({});
-  const [view, setView] = useState("today");
+  // ── CHANGE 2: default view is "heatmap" ────────────────────────────────────
+  const [view, setViewRaw] = useState("heatmap");
   const [cgpaGoal, setCgpaGoal] = useState(8.5);
   const [sem, setSem] = useState("Semester 5");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const t = localStorage.getItem("gr_theme") || "dark";
+    // ── CHANGE 1: fall back to "white" if nothing saved ─────────────────────
+    const t = localStorage.getItem("gr_theme") || "white";
     const tk = localStorage.getItem("gr_tasks_" + dayKey());
-    const tkp = localStorage.getItem("gr_tasks_" + prevDayKey()); // yesterday's tasks
+    const tkp = localStorage.getItem("gr_tasks_" + prevDayKey());
     const ex = localStorage.getItem("gr_exams");
     const sb = localStorage.getItem("gr_subjects");
     const tt = localStorage.getItem("gr_timetable");
@@ -76,17 +79,19 @@ export function AppProvider({ children }) {
     const h = localStorage.getItem("gr_hist");
     const cg = localStorage.getItem("gr_cgpa");
     const sm = localStorage.getItem("gr_sem");
+    // ── CHANGE 2: restore last-visited view, fall back to "heatmap" ─────────
+    const sv = localStorage.getItem("gr_view") || "heatmap";
 
     setThemeS(t);
+    setViewRaw(sv);
 
-    // Carry forward: pull unfinished tasks from yesterday
+    // Carry forward unfinished tasks from yesterday
     let todayTasks = tk ? JSON.parse(tk) : [];
     if (tkp) {
       const yesterday = JSON.parse(tkp);
       const unfinished = yesterday
         .filter((t) => !t.done)
         .map((t) => ({ ...t, carriedOver: true, originalDate: prevDayKey() }));
-      // merge: don't duplicate if already carried over
       const existingIds = new Set(todayTasks.map((t) => t.id));
       const toAdd = unfinished.filter((t) => !existingIds.has(t.id));
       todayTasks = [...toAdd, ...todayTasks];
@@ -109,6 +114,12 @@ export function AppProvider({ children }) {
     localStorage.setItem("gr_theme", t);
     document.documentElement.setAttribute("data-theme", t);
   };
+
+  // ── CHANGE 2: setView also persists to localStorage ─────────────────────────
+  const setView = useCallback((v) => {
+    setViewRaw(v);
+    localStorage.setItem("gr_view", v);
+  }, []);
 
   useEffect(() => {
     if (ready) document.documentElement.setAttribute("data-theme", theme);
@@ -207,7 +218,6 @@ export function AppProvider({ children }) {
     [],
   );
 
-  // Timetable: { Monday: [{id, subject, startTime, endTime, room}] }
   const addSlot = useCallback(
     (day, slot) =>
       setTimetable((p) => ({
@@ -225,13 +235,11 @@ export function AppProvider({ children }) {
     [],
   );
 
-  // Notes: per subject id
   const setNote = useCallback(
     (subjId, text) => setNotes((p) => ({ ...p, [subjId]: text })),
     [],
   );
 
-  // Marks
   const addMark = useCallback(
     (data) => setMarks((p) => [...p, { id: Date.now().toString(), ...data }]),
     [],
@@ -259,7 +267,6 @@ export function AppProvider({ children }) {
     .filter((e) => e.daysLeft >= 0)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
-  // Next class today
   const todayName = DAYS[new Date().getDay()];
   const todaySlots = (timetable[todayName] || [])
     .slice()

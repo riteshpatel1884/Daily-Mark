@@ -1,26 +1,23 @@
 "use client";
 import { useApp } from "@/Components/store";
 
+// ── SHARED avatar color palette (must match SettingsView.jsx exactly) ──
+const AVATAR_COLORS = [
+  "#5b8def",
+  "#9b72cf",
+  "#4caf7d",
+  "#e8924a",
+  "#d46fa0",
+  "#d4b44a",
+];
+function getAvatarColor(name) {
+  return AVATAR_COLORS[
+    name.split("").reduce((s, c) => s + c.charCodeAt(0), 0) %
+      AVATAR_COLORS.length
+  ];
+}
+
 const ITEMS = [
-  {
-    id: "today",
-    label: "Today",
-    icon: (
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="3" y="4" width="18" height="18" rx="3" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-      </svg>
-    ),
-  },
   {
     id: "timetable",
     label: "Timetable",
@@ -192,19 +189,9 @@ export default function Sidebar() {
       .map((w) => w[0]?.toUpperCase() || "")
       .slice(0, 2)
       .join("") || "?";
-  const avatarColors = [
-    "#5b8def",
-    "#9b72cf",
-    "#4caf7d",
-    "#e8924a",
-    "#d46fa0",
-    "#d4b44a",
-  ];
-  const avatarColor =
-    avatarColors[
-      profileName.split("").reduce((s, c) => s + c.charCodeAt(0), 0) %
-        avatarColors.length
-    ];
+
+  // Use the shared helper so color always matches SettingsView
+  const avatarColor = profileName ? getAvatarColor(profileName) : "var(--bg4)";
 
   function minsLabel(m) {
     return m < 60
@@ -234,7 +221,7 @@ export default function Sidebar() {
             width: 34,
             height: 34,
             borderRadius: "50%",
-            background: profileName ? avatarColor : "var(--bg4)",
+            background: avatarColor,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
