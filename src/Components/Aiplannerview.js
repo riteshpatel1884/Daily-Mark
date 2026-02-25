@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useApp } from "@/Components/store";
 
 // ── Parse a time string like "6:00 PM" or "18:00" into minutes since midnight ─
@@ -27,7 +27,6 @@ function collectAllData() {
   try {
     const todayKey = new Date().toISOString().slice(0, 10);
     const now = new Date();
-    // Pass current time so the API builds schedule from NOW
     const currentTime = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
     const currentTimeFormatted = now.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -528,6 +527,33 @@ export default function AIPlannerView() {
   const [generatedAt, setGeneratedAt] = useState(null);
   const [activeTab, setActiveTab] = useState("today");
 
+  // Chat State
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: "assistant",
+      content:
+        "Hi! I'm your AI study coach. Feel free to ask me anything about your schedule, how to study for an exam, or if you just need a motivational push!",
+    },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatting, setIsChatting] = useState(false);
+  const chatEndRef = useRef(null);
+
+  // Load saved plan and chat history on component mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("gr_ai_state");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.plan) setPlan(parsed.plan);
+        if (parsed.generatedAt) setGeneratedAt(parsed.generatedAt);
+        if (parsed.chatMessages) setChatMessages(parsed.chatMessages);
+      }
+    } catch (e) {
+      console.error("Failed to load AI state from local storage", e);
+    }
+  }, []);
+
   const generate = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -541,15 +567,110 @@ export default function AIPlannerView() {
       const json = await res.json();
       if (!res.ok || !json.success)
         throw new Error(json.error || "Failed to generate plan");
+
+      const initialChat = [
+        {
+          role: "assistant",
+          content:
+            "Hi! I'm your AI study coach. Feel free to ask me anything about your schedule, how to study for an exam, or if you just need a motivational push!",
+        },
+      ];
+
       setPlan(json.plan);
       setGeneratedAt(json.generatedAt);
+      setChatMessages(initialChat);
       setActiveTab("today");
+
+      // Save to local storage
+      try {
+        localStorage.setItem(
+          "gr_ai_state",
+          JSON.stringify({
+            plan: json.plan,
+            generatedAt: json.generatedAt,
+            chatMessages: initialChat,
+          }),
+        );
+      } catch (e) {}
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Send message to AI Chat
+  const sendChatMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || isChatting) return;
+
+    const userMsg = { role: "user", content: chatInput };
+    const newMsgs = [...chatMessages, userMsg];
+    setChatMessages(newMsgs);
+    setChatInput("");
+    setIsChatting(true);
+
+    // Save immediately so user message persists if page refreshes
+    try {
+      const saved = JSON.parse(localStorage.getItem("gr_ai_state") || "{}");
+      localStorage.setItem(
+        "gr_ai_state",
+        JSON.stringify({ ...saved, chatMessages: newMsgs }),
+      );
+    } catch (e) {}
+
+    try {
+      const data = collectAllData();
+      const res = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMsgs, contextData: data, plan }),
+      });
+      const json = await res.json();
+      if (json.reply) {
+        const finalMsgs = [
+          ...newMsgs,
+          { role: "assistant", content: json.reply },
+        ];
+        setChatMessages(finalMsgs);
+        // Save assistant reply
+        try {
+          const saved = JSON.parse(localStorage.getItem("gr_ai_state") || "{}");
+          localStorage.setItem(
+            "gr_ai_state",
+            JSON.stringify({ ...saved, chatMessages: finalMsgs }),
+          );
+        } catch (e) {}
+      }
+    } catch (err) {
+      const errMsgs = [
+        ...newMsgs,
+        {
+          role: "assistant",
+          content:
+            "Oops, something went wrong. Check your connection and try again!",
+        },
+      ];
+      setChatMessages(errMsgs);
+      // Save error reply
+      try {
+        const saved = JSON.parse(localStorage.getItem("gr_ai_state") || "{}");
+        localStorage.setItem(
+          "gr_ai_state",
+          JSON.stringify({ ...saved, chatMessages: errMsgs }),
+        );
+      } catch (e) {}
+    } finally {
+      setIsChatting(false);
+    }
+  };
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (activeTab === "chat") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, activeTab, isChatting]);
 
   // ── Filter out past sessions client-side as a safety net ──────────────────
   const nowMins = (() => {
@@ -560,8 +681,6 @@ export default function AIPlannerView() {
   const futureSessions =
     plan?.todayPlan?.filter((s) => {
       const sessionMins = parseTimeToMins(s.time);
-      // Keep sessions that start within the next ~15min or in the future
-      // (give 15min buffer so "just started" sessions still show)
       return sessionMins >= nowMins - 15;
     }) ?? [];
 
@@ -577,6 +696,7 @@ export default function AIPlannerView() {
     { id: "week", label: "Week View" },
     { id: "exams", label: "Exam Strategy" },
     { id: "insights", label: "Insights" },
+    { id: "chat", label: "Coach Chat" },
   ];
 
   return (
@@ -740,7 +860,7 @@ export default function AIPlannerView() {
               "📅 7-day week plan",
               "📝 Per-exam strategies",
               "💡 Data-driven insights",
-              "🎯 Single top priority",
+              "💬 1-on-1 AI Chat",
             ].map((f) => (
               <div
                 key={f}
@@ -816,7 +936,7 @@ export default function AIPlannerView() {
       {/* ── Plan output ── */}
       {plan && !loading && (
         <div className="ai-fadein">
-          {/* Greeting card without ScoreRing */}
+          {/* Greeting card */}
           <div
             style={{
               display: "flex",
@@ -982,6 +1102,7 @@ export default function AIPlannerView() {
                     {futureSessions.length}
                   </span>
                 )}
+                {t.id === "chat" && <span style={{ marginLeft: 5 }}>💬</span>}
               </button>
             ))}
           </div>
@@ -1142,35 +1263,149 @@ export default function AIPlannerView() {
             </div>
           )}
 
-          {/* Footer */}
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: 20,
-              paddingTop: 16,
-              borderTop: "1px solid var(--border)",
-            }}
-          >
-            <button
-              onClick={generate}
+          {/* ── CHAT TAB ── */}
+          {activeTab === "chat" && (
+            <div
               style={{
-                padding: "8px 20px",
-                borderRadius: 9,
+                display: "flex",
+                flexDirection: "column",
+                height: 400,
+                background: "var(--bg2)",
+                borderRadius: 14,
                 border: "1px solid var(--border)",
-                background: "transparent",
-                color: "var(--txt2)",
-                fontFamily: "var(--font)",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
+                overflow: "hidden",
               }}
             >
-              ↺ Regenerate Plan
-            </button>
-            <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 6 }}>
-              Powered by Groq · llama-3.3-70b
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
+                {chatMessages.map((msg, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      alignSelf:
+                        msg.role === "user" ? "flex-end" : "flex-start",
+                      maxWidth: "85%",
+                      background:
+                        msg.role === "user" ? "var(--txt)" : "var(--bg3)",
+                      color: msg.role === "user" ? "var(--bg)" : "var(--txt)",
+                      padding: "10px 14px",
+                      borderRadius: 14,
+                      borderBottomRightRadius: msg.role === "user" ? 4 : 14,
+                      borderBottomLeftRadius: msg.role === "assistant" ? 4 : 14,
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                ))}
+                {isChatting && (
+                  <div
+                    style={{
+                      alignSelf: "flex-start",
+                      background: "var(--bg3)",
+                      color: "var(--txt2)",
+                      padding: "10px 14px",
+                      borderRadius: 14,
+                      borderBottomLeftRadius: 4,
+                      fontSize: 13,
+                    }}
+                  >
+                    Thinking...
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              <form
+                onSubmit={sendChatMessage}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  padding: "10px",
+                  background: "var(--bg)",
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                <input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask your AI coach..."
+                  style={{
+                    flex: 1,
+                    background: "var(--bg3)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 9,
+                    padding: "10px 14px",
+                    color: "var(--txt)",
+                    fontSize: 13,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={isChatting || !chatInput.trim()}
+                  style={{
+                    background: "var(--txt)",
+                    color: "var(--bg)",
+                    border: "none",
+                    borderRadius: 9,
+                    padding: "0 18px",
+                    fontWeight: 700,
+                    cursor:
+                      !chatInput.trim() || isChatting
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity: !chatInput.trim() || isChatting ? 0.5 : 1,
+                    transition: "opacity .2s",
+                  }}
+                >
+                  Send
+                </button>
+              </form>
             </div>
-          </div>
+          )}
+
+          {/* Footer */}
+          {activeTab !== "chat" && (
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: 20,
+                paddingTop: 16,
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <button
+                onClick={generate}
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: 9,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--txt2)",
+                  fontFamily: "var(--font)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                ↺ Regenerate Plan
+              </button>
+              <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 6 }}>
+                Powered by Groq · llama-3.3-70b
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

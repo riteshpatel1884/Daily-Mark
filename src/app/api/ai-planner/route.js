@@ -105,7 +105,7 @@ Upcoming Exams (next 30 days):
 ${urgentExams.length > 0 ? urgentExams.map((e) => `- ${e.subject} (${e.type}): ${e.daysLeft} days away${e.syllabus ? " | Topics: " + e.syllabus : ""}`).join("\n") : "No exams in next 30 days"}
 
 Pending Tasks:
-${pendingTasks.length > 0 ? pendingTasks.map((t) => `- [${t.type || "study"}] ${t.title || t.text || "Task"}`).join("\n") : "No pending tasks"}
+${pendingTasks.length > 0 ? pendingTasks.map((t) => `-[${t.type || "study"}] ${t.title || t.text || "Task"}`).join("\n") : "No pending tasks"}
 
 Attendance Risks:
 ${attendanceWarnings.length > 0 ? attendanceWarnings.join("\n") : "All subjects above threshold"}
