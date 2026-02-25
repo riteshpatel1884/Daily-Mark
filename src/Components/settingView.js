@@ -773,7 +773,7 @@ export default function SettingsView() {
             letterSpacing: ".04em",
           }}
         >
-          Daily Mark
+          LeaderLab
         </div>
         <div
           style={{

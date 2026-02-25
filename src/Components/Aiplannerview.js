@@ -572,7 +572,7 @@ export default function AIPlannerView() {
         {
           role: "assistant",
           content:
-            "Hi! I'm your AI study coach. Feel free to ask me anything about your schedule, how to study for an exam, or if you just need a motivational push!",
+            "Hi! I've generated a fresh plan for you based on your current data. You can ask me to add, change, or remove subjects right here!",
         },
       ];
 
@@ -627,12 +627,59 @@ export default function AIPlannerView() {
         body: JSON.stringify({ messages: newMsgs, contextData: data, plan }),
       });
       const json = await res.json();
+
       if (json.reply) {
+        let replyText = json.reply;
+
+        // INTERCEPT PLAN UPDATES WITH BULLETPROOF REGEX
+        const match = replyText.match(
+          /<UPDATE_PLAN>([\s\S]*?)<\/UPDATE_PLAN>/i,
+        );
+        if (match) {
+          try {
+            // Remove markdown code blocks just in case the AI generated them
+            let cleanJson = match[1]
+              .replace(/```json/gi, "")
+              .replace(/```/gi, "")
+              .trim();
+
+            // Find the literal array bounds in case AI included extra text inside the tags
+            const firstBracket = cleanJson.indexOf("[");
+            const lastBracket = cleanJson.lastIndexOf("]");
+            if (firstBracket !== -1 && lastBracket !== -1) {
+              cleanJson = cleanJson.substring(firstBracket, lastBracket + 1);
+            }
+
+            const updatedTodayPlan = JSON.parse(cleanJson);
+
+            setPlan((prev) => {
+              const newPlan = { ...prev, todayPlan: updatedTodayPlan };
+              // Save updated plan to local storage
+              const saved = JSON.parse(
+                localStorage.getItem("gr_ai_state") || "{}",
+              );
+              localStorage.setItem(
+                "gr_ai_state",
+                JSON.stringify({ ...saved, plan: newPlan }),
+              );
+              return newPlan;
+            });
+
+            // Strip the JSON block and tags from the readable reply
+            replyText = replyText.replace(match[0], "").trim();
+            if (!replyText)
+              replyText = "I've successfully updated your Today's Plan!";
+          } catch (err) {
+            console.error("Failed to parse the updated plan JSON from AI", err);
+          }
+        }
+
         const finalMsgs = [
           ...newMsgs,
-          { role: "assistant", content: json.reply },
+          { role: "assistant", content: replyText },
         ];
         setChatMessages(finalMsgs);
+
         // Save assistant reply
         try {
           const saved = JSON.parse(localStorage.getItem("gr_ai_state") || "{}");
@@ -652,7 +699,6 @@ export default function AIPlannerView() {
         },
       ];
       setChatMessages(errMsgs);
-      // Save error reply
       try {
         const saved = JSON.parse(localStorage.getItem("gr_ai_state") || "{}");
         localStorage.setItem(
@@ -860,7 +906,7 @@ export default function AIPlannerView() {
               "📅 7-day week plan",
               "📝 Per-exam strategies",
               "💡 Data-driven insights",
-              "💬 1-on-1 AI Chat",
+              "💬 1-on-1 AI Chat (Add/Edit Plan dynamically)",
             ].map((f) => (
               <div
                 key={f}
@@ -1269,7 +1315,7 @@ export default function AIPlannerView() {
               style={{
                 display: "flex",
                 flexDirection: "column",
-                height: 400,
+                height: 450,
                 background: "var(--bg2)",
                 borderRadius: 14,
                 border: "1px solid var(--border)",
@@ -1324,6 +1370,77 @@ export default function AIPlannerView() {
                   </div>
                 )}
                 <div ref={chatEndRef} />
+              </div>
+
+              {/* Quick Actions Array */}
+              <div
+                style={{
+                  padding: "8px 12px",
+                  borderTop: "1px solid var(--border)",
+                  display: "flex",
+                  gap: 8,
+                  overflowX: "auto",
+                  background: "var(--bg3)",
+                }}
+              >
+                <button
+                  onClick={() =>
+                    setChatInput(
+                      "I want to add a new subject to my plan today: ",
+                    )
+                  }
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "6px 12px",
+                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--txt)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  ➕ Add Subject
+                </button>
+                <button
+                  onClick={() =>
+                    setChatInput("I want to edit/change a subject in my plan: ")
+                  }
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "6px 12px",
+                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--txt)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  ✏️ Edit Subject
+                </button>
+                <button
+                  onClick={() =>
+                    setChatInput(
+                      "Please remove this subject from my plan today: ",
+                    )
+                  }
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "6px 12px",
+                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--txt)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  🗑️ Remove Subject
+                </button>
               </div>
 
               <form

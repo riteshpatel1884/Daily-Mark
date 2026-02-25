@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Daily Mark",
+  title: "LeaderLab",
   description: "Turn daily tasks into daily wins.",
 };
 

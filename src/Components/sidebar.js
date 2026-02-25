@@ -246,7 +246,7 @@ export default function Sidebar() {
               whiteSpace: "nowrap",
             }}
           >
-            {profileName || "Daily Mark"}
+            {profileName || "LeaderLab"}
           </div>
           <div style={{ fontSize: 10, color: "var(--txt3)" }}>
             {profileBranch && profileYear
