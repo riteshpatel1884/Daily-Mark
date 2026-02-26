@@ -507,16 +507,18 @@ export default function BottomNav() {
       {/* More drawer */}
       {drawerOpen && (
         <>
+          {/* Backdrop — separate from drawer, no pointer-events blocking scroll */}
           <div
             onClick={() => setDrawerOpen(false)}
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0,0,0,.45)",
+              background: "rgba(0,0,0,.5)",
               zIndex: 55,
-              backdropFilter: "blur(4px)",
             }}
           />
+
+          {/* Drawer sheet */}
           <div
             ref={drawerRef}
             style={{
@@ -527,27 +529,29 @@ export default function BottomNav() {
               zIndex: 56,
               background: "var(--bg2)",
               borderRadius: "22px 22px 0 0",
-              maxHeight: "82dvh",
+              maxHeight: "90dvh",
               display: "flex",
               flexDirection: "column",
               animation: "sheetUp .26s cubic-bezier(.32,1,.5,1) both",
-              boxShadow: "0 -8px 40px rgba(0,0,0,.18)",
+              boxShadow: "0 -8px 40px rgba(0,0,0,.2)",
             }}
           >
-            {/* Handle + header — fixed, never scrolls */}
-            <div style={{ flexShrink: 0 }}>
+            {/* ── Fixed header (never scrolls) ── */}
+            <div
+              style={{ flexShrink: 0, borderBottom: "1px solid var(--border)" }}
+            >
               <div
                 style={{
                   width: 36,
                   height: 4,
                   background: "var(--border2)",
                   borderRadius: 99,
-                  margin: "12px auto 4px",
+                  margin: "12px auto 0",
                 }}
               />
               <div
                 style={{
-                  padding: "8px 20px 10px",
+                  padding: "8px 20px 12px",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -570,10 +574,10 @@ export default function BottomNav() {
                     background: "none",
                     border: "none",
                     color: "var(--txt3)",
-                    fontSize: 20,
+                    fontSize: 22,
                     cursor: "pointer",
                     lineHeight: 1,
-                    padding: 0,
+                    padding: "0 2px",
                   }}
                 >
                   ×
@@ -581,12 +585,17 @@ export default function BottomNav() {
               </div>
             </div>
 
-            {/* Scrollable content */}
+            {/* ── Scrollable body ── */}
             <div
               style={{
-                overflowY: "auto",
                 flex: 1,
-                paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+                overflowY: "scroll",
+                WebkitOverflowScrolling: "touch",
+                padding: "10px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                paddingBottom: "calc(90px + env(safe-area-inset-bottom))",
               }}
             >
               {/* 2-col grid */}
@@ -595,7 +604,6 @@ export default function BottomNav() {
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: 10,
-                  padding: "0 16px 4px",
                 }}
               >
                 {MORE_ITEMS.map((item) => {
@@ -607,8 +615,8 @@ export default function BottomNav() {
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 11,
-                        padding: "13px 13px",
+                        gap: 10,
+                        padding: "12px 12px",
                         borderRadius: 14,
                         border: `1.5px solid ${isActive ? item.color : "var(--border)"}`,
                         background: isActive ? item.bg : "var(--bg3)",
@@ -619,8 +627,8 @@ export default function BottomNav() {
                     >
                       <div
                         style={{
-                          width: 36,
-                          height: 36,
+                          width: 34,
+                          height: 34,
                           borderRadius: 10,
                           background: item.bg,
                           border: `1px solid ${item.color}33`,
@@ -633,7 +641,7 @@ export default function BottomNav() {
                       >
                         {item.icon}
                       </div>
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         <div
                           style={{
                             fontSize: 12,
@@ -664,178 +672,174 @@ export default function BottomNav() {
                 style={{
                   height: 1,
                   background: "var(--border)",
-                  margin: "10px 16px 8px",
+                  margin: "2px 0",
                 }}
               />
 
-              {/* Notifications */}
-              <div style={{ padding: "0 16px 6px" }}>
-                <button
-                  onClick={() => goTo("notifications")}
+              {/* Notifications full-width row */}
+              <button
+                onClick={() => goTo("notifications")}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 13px",
+                  borderRadius: 14,
+                  border: `1.5px solid ${view === "notifications" ? "#d4b44a" : "var(--border)"}`,
+                  background:
+                    view === "notifications" ? "#d4b44a15" : "var(--bg3)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "all .15s",
+                }}
+              >
+                <div
                   style={{
-                    width: "100%",
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    background: "#d4b44a15",
+                    border: "1px solid #d4b44a33",
                     display: "flex",
                     alignItems: "center",
-                    gap: 12,
-                    padding: "11px 13px",
-                    borderRadius: 14,
-                    border: `1.5px solid ${view === "notifications" ? "#d4b44a" : "var(--border)"}`,
-                    background:
-                      view === "notifications" ? "#d4b44a15" : "var(--bg3)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all .15s",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    color: "#d4b44a",
+                    position: "relative",
                   }}
                 >
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      background: "#d4b44a15",
-                      border: "1px solid #d4b44a33",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      color: "#d4b44a",
-                      position: "relative",
-                    }}
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <svg
-                      width="17"
-                      height="17"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                      <path d="M13.73 21a2 2 0 01-3.46 0" />
-                    </svg>
-                    {unreadCount > 0 && (
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: -4,
-                          right: -4,
-                          background: "#e05252",
-                          color: "#fff",
-                          fontSize: 8,
-                          fontWeight: 800,
-                          minWidth: 14,
-                          height: 14,
-                          borderRadius: 99,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          padding: "0 3px",
-                        }}
-                      >
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "var(--txt)",
-                        marginBottom: 2,
-                      }}
-                    >
-                      Notifications
-                    </div>
-                    <div style={{ fontSize: 10, color: "var(--txt3)" }}>
-                      Alerts & announcements
-                    </div>
-                  </div>
+                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 01-3.46 0" />
+                  </svg>
                   {unreadCount > 0 && (
                     <span
                       style={{
+                        position: "absolute",
+                        top: -4,
+                        right: -4,
                         background: "#e05252",
                         color: "#fff",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: "2px 8px",
+                        fontSize: 8,
+                        fontWeight: 800,
+                        minWidth: 14,
+                        height: 14,
                         borderRadius: 99,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0 3px",
                       }}
                     >
-                      {unreadCount}
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
-                </button>
-              </div>
-
-              {/* Settings — always last */}
-              <div style={{ padding: "0 16px 0" }}>
-                <button
-                  onClick={() => goTo("settings")}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "11px 13px",
-                    borderRadius: 14,
-                    border: `1.5px solid ${view === "settings" ? "var(--txt)" : "var(--border)"}`,
-                    background:
-                      view === "settings" ? "var(--accent-dim)" : "var(--bg3)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all .15s",
-                  }}
-                >
+                </div>
+                <div style={{ flex: 1 }}>
                   <div
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      background: "var(--bg4)",
-                      border: "1px solid var(--border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      color: "var(--txt2)",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "var(--txt)",
+                      marginBottom: 2,
                     }}
                   >
-                    <svg
-                      width="17"
-                      height="17"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                    </svg>
+                    Notifications
                   </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "var(--txt)",
-                        marginBottom: 2,
-                      }}
-                    >
-                      Settings
-                    </div>
-                    <div style={{ fontSize: 10, color: "var(--txt3)" }}>
-                      Theme, profile & preferences
-                    </div>
+                  <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+                    Alerts & announcements
                   </div>
-                </button>
-              </div>
+                </div>
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      background: "#e05252",
+                      color: "#fff",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 99,
+                    }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Settings — last item */}
+              <button
+                onClick={() => goTo("settings")}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 13px",
+                  borderRadius: 14,
+                  border: `1.5px solid ${view === "settings" ? "var(--txt)" : "var(--border)"}`,
+                  background:
+                    view === "settings" ? "var(--accent-dim)" : "var(--bg3)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "all .15s",
+                }}
+              >
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    background: "var(--bg4)",
+                    border: "1px solid var(--border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    color: "var(--txt2)",
+                  }}
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                  </svg>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "var(--txt)",
+                      marginBottom: 2,
+                    }}
+                  >
+                    Settings
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+                    Theme, profile & preferences
+                  </div>
+                </div>
+              </button>
             </div>
-            {/* end scrollable */}
+            {/* end scrollable body */}
           </div>
           {/* end drawer */}
         </>

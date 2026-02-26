@@ -11,8 +11,7 @@ const TASK_COLORS = {
   other: "#888",
 };
 
-// ── Circular SVG timer ring ──
-function Ring({ pct, color, size = 220, stroke = 10, children }) {
+function Ring({ pct, color, size = 200, stroke = 8, children }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const dash = circ * (1 - pct);
@@ -25,7 +24,6 @@ function Ring({ pct, color, size = 220, stroke = 10, children }) {
         height={size}
         style={{ position: "absolute", inset: 0 }}
       >
-        {/* track */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -34,7 +32,6 @@ function Ring({ pct, color, size = 220, stroke = 10, children }) {
           stroke="var(--border)"
           strokeWidth={stroke}
         />
-        {/* fill */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -80,18 +77,16 @@ export default function FocusModeView() {
   const pendingTasks = tasks.filter((t) => !t.done);
   const doneTasks = tasks.filter((t) => t.done);
 
-  // ── Timer state ──
   const [modeId, setModeId] = useState("pomodoro");
   const [customMins, setCustomMins] = useState(45);
   const [secsLeft, setSecsLeft] = useState(25 * 60);
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
   const [cycles, setCycles] = useState(0);
-  const [focusTask, setFocusTask] = useState(null); // id of active task
+  const [focusTask, setFocusTask] = useState(null);
   const intervalRef = useRef(null);
   const totalSecs = useRef(25 * 60);
 
-  // ── Quote pool ──
   const quotes = [
     "Focus is the art of knowing what to ignore.",
     "One task. One session. Full attention.",
@@ -100,6 +95,19 @@ export default function FocusModeView() {
     "Small steps every day beat big leaps once in a while.",
   ];
   const [quote] = useState(quotes[Math.floor(Math.random() * quotes.length)]);
+
+  // Responsive ring size
+  const [ringSize, setRingSize] = useState(200);
+  useEffect(() => {
+    function updateSize() {
+      setRingSize(
+        window.innerWidth <= 640 ? Math.min(window.innerWidth - 80, 200) : 200,
+      );
+    }
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   function getModeSeconds(id) {
     if (id === "custom") return customMins * 60;
@@ -123,9 +131,8 @@ export default function FocusModeView() {
       clearInterval(intervalRef.current);
       setRunning(false);
       setFinished(false);
-      const s = m * 60;
-      totalSecs.current = s;
-      setSecsLeft(s);
+      totalSecs.current = m * 60;
+      setSecsLeft(m * 60);
     }
   }
 
@@ -135,18 +142,15 @@ export default function FocusModeView() {
         clearInterval(intervalRef.current);
         setRunning(false);
         setFinished(true);
-        // Auto-log pomodoro if pomodoro mode and a task selected
         if (modeId === "pomodoro") {
           setCycles((c) => c + 1);
           if (focusTask) addPomodoro(focusTask);
         }
-        // Browser notification
         try {
-          if (Notification.permission === "granted") {
+          if (Notification.permission === "granted")
             new Notification("⏰ Session complete!", {
               body: "Time for a break.",
             });
-          }
         } catch {}
         return 0;
       }
@@ -163,7 +167,6 @@ export default function FocusModeView() {
     return () => clearInterval(intervalRef.current);
   }, [running, tick]);
 
-  // Request notification permission once
   useEffect(() => {
     try {
       if (Notification.permission === "default")
@@ -178,7 +181,6 @@ export default function FocusModeView() {
     }
     setRunning((r) => !r);
   }
-
   function resetTimer() {
     clearInterval(intervalRef.current);
     setRunning(false);
@@ -191,7 +193,6 @@ export default function FocusModeView() {
   const mins = String(Math.floor(secsLeft / 60)).padStart(2, "0");
   const secs = String(secsLeft % 60).padStart(2, "0");
   const pct = totalSecs.current > 0 ? secsLeft / totalSecs.current : 1;
-
   const modeColor =
     modeId === "pomodoro"
       ? "var(--red)"
@@ -202,9 +203,18 @@ export default function FocusModeView() {
           : "var(--purple)";
 
   return (
-    <div className="page fadeUp" style={{ paddingTop: 28, paddingBottom: 40 }}>
-      {/* ── Header ── */}
-      <div style={{ marginBottom: 28 }}>
+    <div className="page fadeUp" style={{ paddingTop: 24, paddingBottom: 48 }}>
+      {/* Responsive styles injected */}
+      <style>{`
+        .focus-outer { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+        .focus-ring-wrap { display: flex; justify-content: center; }
+        @media (max-width: 640px) {
+          .focus-outer { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
         <div
           style={{
             display: "flex",
@@ -213,11 +223,11 @@ export default function FocusModeView() {
             marginBottom: 4,
           }}
         >
-          <span style={{ fontSize: 22 }}>🎯</span>
+          <span style={{ fontSize: 20 }}>🎯</span>
           <h1
             style={{
               margin: 0,
-              fontSize: 22,
+              fontSize: 21,
               fontWeight: 800,
               color: "var(--txt)",
             }}
@@ -228,7 +238,7 @@ export default function FocusModeView() {
         <p
           style={{
             margin: 0,
-            fontSize: 13,
+            fontSize: 12,
             color: "var(--txt3)",
             fontStyle: "italic",
           }}
@@ -237,24 +247,17 @@ export default function FocusModeView() {
         </p>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 20,
-          alignItems: "start",
-        }}
-      >
+      <div className="focus-outer">
         {/* ── LEFT: Timer ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Mode tabs */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Mode pills */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {MODES.map((m) => (
               <button
                 key={m.id}
                 onClick={() => applyMode(m.id)}
                 style={{
-                  padding: "6px 13px",
+                  padding: "5px 12px",
                   borderRadius: 99,
                   border: "1.5px solid",
                   borderColor: modeId === m.id ? modeColor : "var(--border)",
@@ -273,7 +276,7 @@ export default function FocusModeView() {
             ))}
           </div>
 
-          {/* Custom duration input */}
+          {/* Custom input */}
           {modeId === "custom" && (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span
@@ -334,18 +337,18 @@ export default function FocusModeView() {
             </div>
           )}
 
-          {/* Ring timer */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
+          {/* Ring */}
+          <div className="focus-ring-wrap">
             <Ring
               pct={pct}
               color={finished ? "var(--green)" : modeColor}
-              size={200}
-              stroke={8}
+              size={ringSize}
+              stroke={Math.round(ringSize * 0.04)}
             >
               <div
                 style={{
                   fontFamily: "var(--mono)",
-                  fontSize: 42,
+                  fontSize: Math.round(ringSize * 0.2),
                   fontWeight: 800,
                   color: "var(--txt)",
                   letterSpacing: "-2px",
@@ -476,8 +479,8 @@ export default function FocusModeView() {
 
         {/* ── RIGHT: Tasks ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Stats strip */}
-          <div style={{ display: "flex", gap: 10 }}>
+          {/* Stats */}
+          <div style={{ display: "flex", gap: 8 }}>
             {[
               {
                 label: "Pending",
@@ -494,7 +497,7 @@ export default function FocusModeView() {
                   background: "var(--bg3)",
                   border: "1px solid var(--border)",
                   borderRadius: 12,
-                  padding: "10px 12px",
+                  padding: "10px 8px",
                   textAlign: "center",
                 }}
               >
@@ -510,7 +513,7 @@ export default function FocusModeView() {
                 </div>
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: 600,
                     color: "var(--txt3)",
                     textTransform: "uppercase",
@@ -535,7 +538,7 @@ export default function FocusModeView() {
           >
             <div
               style={{
-                padding: "11px 14px 8px",
+                padding: "10px 14px 8px",
                 borderBottom: "1px solid var(--border)",
                 display: "flex",
                 justifyContent: "space-between",
@@ -557,8 +560,7 @@ export default function FocusModeView() {
                 {doneTasks.length}/{tasks.length}
               </span>
             </div>
-
-            <div style={{ maxHeight: 340, overflowY: "auto" }}>
+            <div style={{ maxHeight: 320, overflowY: "auto" }}>
               {tasks.length === 0 ? (
                 <div style={{ padding: "28px 0", textAlign: "center" }}>
                   <div style={{ fontSize: 28, marginBottom: 6 }}>✅</div>
@@ -584,7 +586,6 @@ export default function FocusModeView() {
                         transition: "all .15s",
                       }}
                     >
-                      {/* Checkbox */}
                       <div
                         onClick={() => toggleTask(task.id)}
                         className={`chk ${task.done ? "on" : ""}`}
@@ -605,8 +606,6 @@ export default function FocusModeView() {
                           </svg>
                         )}
                       </div>
-
-                      {/* Color strip */}
                       <div
                         style={{
                           width: 3,
@@ -617,8 +616,6 @@ export default function FocusModeView() {
                           minHeight: 18,
                         }}
                       />
-
-                      {/* Title */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div
                           style={{
@@ -645,8 +642,6 @@ export default function FocusModeView() {
                           </div>
                         )}
                       </div>
-
-                      {/* Pomodoro count */}
                       {task.pomodoros > 0 && (
                         <span
                           style={{
@@ -659,8 +654,6 @@ export default function FocusModeView() {
                           🍅{task.pomodoros}
                         </span>
                       )}
-
-                      {/* Focus button */}
                       {!task.done && (
                         <button
                           onClick={() => setFocusTask(isFocus ? null : task.id)}
@@ -714,19 +707,12 @@ export default function FocusModeView() {
             <div
               style={{ fontSize: 12, color: "var(--txt2)", lineHeight: 1.5 }}
             >
-              Click 🎯 on a task to link it with the timer. Completing a
-              Pomodoro cycle automatically logs it to that task.
+              Tap 🎯 on a task to link it with the timer. Completing a Pomodoro
+              cycle auto-logs it to that task.
             </div>
           </div>
         </div>
       </div>
-
-      {/* Mobile layout override */}
-      <style>{`
-        @media (max-width: 640px) {
-          .focus-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </div>
   );
 }

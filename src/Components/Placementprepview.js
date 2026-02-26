@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 
 // ── DSA Question Bank ─────────────────────────────────────────────────────────
 const DSA_QUESTIONS = {
-  arrays: [
+  arrays:[
     {
       id: "a1",
       title: "Two Sum",
@@ -189,7 +189,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/4sum/",
     },
   ],
-  linkedlist: [
+  linkedlist:[
     {
       id: "ll1",
       title: "Reverse Linked List",
@@ -314,7 +314,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/middle-of-the-linked-list/",
     },
   ],
-  stacks: [
+  stacks:[
     {
       id: "sq1",
       title: "Valid Parentheses",
@@ -407,7 +407,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/sliding-window-maximum/",
     },
   ],
-  trees: [
+  trees:[
     {
       id: "t1",
       title: "Invert Binary Tree",
@@ -568,7 +568,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/boundary-of-binary-tree/",
     },
   ],
-  graphs: [
+  graphs:[
     {
       id: "g1",
       title: "Number of Islands",
@@ -725,7 +725,7 @@ const DSA_QUESTIONS = {
         "https://leetcode.com/problems/critical-connections-in-a-network/",
     },
   ],
-  dp: [
+  dp:[
     {
       id: "dp1",
       title: "Climbing Stairs",
@@ -909,7 +909,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/russian-doll-envelopes/",
     },
   ],
-  recursion: [
+  recursion:[
     {
       id: "r1",
       title: "Subsets",
@@ -1034,7 +1034,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/unique-binary-search-trees-ii/",
     },
   ],
-  sorting: [
+  sorting:[
     {
       id: "s1",
       title: "Sort Colors (Dutch Flag)",
@@ -1129,7 +1129,7 @@ const DSA_QUESTIONS = {
         "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/",
     },
   ],
-  greedy: [
+  greedy:[
     {
       id: "gr1",
       title: "Maximum Subarray",
@@ -1223,7 +1223,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/candy/",
     },
   ],
-  hashing: [
+  hashing:[
     {
       id: "h1",
       title: "Two Sum",
@@ -1297,7 +1297,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/brick-wall/",
     },
   ],
-  heap: [
+  heap:[
     {
       id: "hp1",
       title: "Kth Largest Element in a Stream",
@@ -1373,7 +1373,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/ipo/",
     },
   ],
-  trie: [
+  trie:[
     {
       id: "tr1",
       title: "Implement Trie",
@@ -1439,7 +1439,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/map-sum-pairs/",
     },
   ],
-  bitmanip: [
+  bitmanip:[
     {
       id: "b1",
       title: "Single Number",
@@ -1501,7 +1501,7 @@ const DSA_QUESTIONS = {
       leetcode: "https://leetcode.com/problems/bitwise-and-of-numbers-range/",
     },
   ],
-  math: [
+  math:[
     {
       id: "m1",
       title: "Palindrome Number",
@@ -1566,7 +1566,7 @@ const DSA_QUESTIONS = {
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DSA_TOPICS = [
+const DSA_TOPICS =[
   { id: "arrays", label: "Arrays & Strings", total: 30 },
   { id: "linkedlist", label: "Linked Lists", total: 20 },
   { id: "stacks", label: "Stacks & Queues", total: 15 },
@@ -1583,11 +1583,11 @@ const DSA_TOPICS = [
   { id: "math", label: "Math & Number Theory", total: 10 },
 ];
 
-const CORE_SUBJECTS = [
+const CORE_SUBJECTS =[
   {
     id: "os",
     label: "Operating Systems",
-    topics: [
+    topics:[
       "Processes & Threads",
       "Memory Management",
       "Deadlocks",
@@ -1599,7 +1599,7 @@ const CORE_SUBJECTS = [
   {
     id: "dbms",
     label: "DBMS",
-    topics: [
+    topics:[
       "SQL Queries",
       "Normalization",
       "Transactions & ACID",
@@ -1611,7 +1611,7 @@ const CORE_SUBJECTS = [
   {
     id: "cn",
     label: "Computer Networks",
-    topics: [
+    topics:[
       "OSI / TCP-IP Model",
       "TCP vs UDP",
       "HTTP / HTTPS",
@@ -1623,7 +1623,7 @@ const CORE_SUBJECTS = [
   {
     id: "oops",
     label: "OOP Concepts",
-    topics: [
+    topics:[
       "Inheritance & Polymorphism",
       "Abstraction & Encapsulation",
       "Design Patterns",
@@ -1634,7 +1634,7 @@ const CORE_SUBJECTS = [
   {
     id: "algo",
     label: "Algorithms",
-    topics: [
+    topics:[
       "Time & Space Complexity",
       "Divide & Conquer",
       "Graph Algorithms",
@@ -1648,12 +1648,12 @@ const SKILL_CATEGORIES = [
   {
     id: "lang",
     label: "Languages",
-    items: ["C++", "Java", "Python", "JavaScript", "Go", "Rust"],
+    items:["C++", "Java", "Python", "JavaScript", "Go", "Rust"],
   },
   {
     id: "web",
     label: "Web / Backend",
-    items: [
+    items:[
       "React",
       "Node.js",
       "Express",
@@ -1667,7 +1667,7 @@ const SKILL_CATEGORIES = [
   {
     id: "devops",
     label: "DevOps & Cloud",
-    items: [
+    items:[
       "Git & GitHub",
       "Docker",
       "Kubernetes",
@@ -1680,7 +1680,7 @@ const SKILL_CATEGORIES = [
   {
     id: "ml",
     label: "ML / Data",
-    items: [
+    items:[
       "NumPy / Pandas",
       "Scikit-learn",
       "TensorFlow / PyTorch",
@@ -1691,7 +1691,7 @@ const SKILL_CATEGORIES = [
   },
 ];
 
-const COMPANY_TIERS = [
+const COMPANY_TIERS =[
   {
     id: "dream",
     label: "Dream",
@@ -1729,7 +1729,7 @@ const COMPANY_TIERS = [
   },
 ];
 
-const APP_STATUS = [
+const APP_STATUS =[
   "Shortlisted",
   "OA Sent",
   "OA Done",
@@ -1746,7 +1746,7 @@ const STATUS_COLORS = {
   Rejected: { color: "var(--red)", bg: "var(--red)18" },
 };
 
-const RESUME_TIPS = [
+const RESUME_TIPS =[
   "Keep resume to 1 page for < 3 years experience",
   "Quantify every achievement (e.g. 'improved speed by 40%')",
   "Use action verbs: Built, Designed, Optimized, Led",
@@ -1757,7 +1757,7 @@ const RESUME_TIPS = [
   "Tailor keywords to each job description",
 ];
 
-const INTERVIEW_ROUNDS = [
+const INTERVIEW_ROUNDS =[
   "Coding Round",
   "Technical Round 1",
   "Technical Round 2",
@@ -1788,7 +1788,7 @@ function save(key, val) {
 
 // ── API Fetchers ──────────────────────────────────────────────────────────────
 async function fetchLeetCodeStats(username) {
-  const urls = [
+  const urls =[
     `https://leetcode-stats-api.herokuapp.com/${username}`,
     `https://alfa-leetcode-api.0x10.workers.dev/userProfile/${username}`,
   ];
@@ -2044,12 +2044,13 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
         inset: 0,
         background: "rgba(0,0,0,0.65)",
         backdropFilter: "blur(5px)",
-        zIndex: 9999,
+        zIndex: 99999, // Guaranteed to be on top
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
         padding: "0",
         animation: "fadeIn .15s ease",
+        boxSizing: "border-box", // Ensure it contains width bounds securely
       }}
     >
       <div
@@ -2058,12 +2059,14 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
           border: "1px solid var(--border)",
           borderRadius: "0 0 20px 20px",
           width: "100%",
-          maxWidth: "100%",
+          maxWidth: "600px", // Safely constrains it on desktop, scales normally on mobile
           maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
           animation: "slideDown .22s cubic-bezier(.16,1,.3,1)",
+          boxSizing: "border-box",
+          overflow: "hidden", // Prevents inner items forcing lateral overflow
         }}
       >
         {/* Header */}
@@ -2072,6 +2075,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
             padding: "18px 20px 14px",
             borderBottom: "1px solid var(--border)",
             flexShrink: 0,
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -2082,20 +2086,20 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
               marginBottom: 12,
             }}
           >
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
                   fontSize: 17,
                   fontWeight: 800,
                   color: "var(--txt)",
                   letterSpacing: "-.02em",
+                  wordBreak: "break-word",
                 }}
               >
                 {topic.label}
               </div>
               <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>
-                {doneCount} / {questions.length} solved · Click a question to
-                mark done
+                {doneCount} / {questions.length} solved · Click to mark done
               </div>
             </div>
             <button
@@ -2161,7 +2165,14 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
           </div>
 
           {/* Diff summary chips */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              marginBottom: 12,
+              flexWrap: "wrap",
+            }}
+          >
             {Object.entries(diffCounts).map(([d, cnt]) => {
               const dc = DIFF_CONFIG[d];
               const doneCnt = questions.filter(
@@ -2187,13 +2198,14 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
           </div>
 
           {/* Search + filter */}
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search questions…"
               style={{
-                flex: 1,
+                flex: "1 1 120px",
+                minWidth: 0, // Critical for preventing flex blowout
                 background: "var(--bg3)",
                 border: "1px solid var(--border)",
                 borderRadius: 9,
@@ -2202,9 +2214,10 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                 color: "var(--txt)",
                 outline: "none",
                 fontFamily: "var(--font)",
+                boxSizing: "border-box",
               }}
             />
-            <div style={{ display: "flex", gap: 4 }}>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {["All", "Easy", "Medium", "Hard"].map((f) => {
                 const dc = f === "All" ? null : DIFF_CONFIG[f];
                 return (
@@ -2234,7 +2247,14 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
         </div>
 
         {/* Question list */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px 24px" }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "12px 20px 24px",
+            boxSizing: "border-box",
+          }}
+        >
           {filtered.length === 0 ? (
             <div
               style={{
@@ -2265,6 +2285,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                       cursor: "pointer",
                       transition: "all .15s",
                       userSelect: "none",
+                      boxSizing: "border-box",
                     }}
                     onClick={() => onToggle(q.id)}
                   >
@@ -2321,6 +2342,8 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                         color: done ? "#4caf7d" : "var(--txt)",
                         lineHeight: 1.3,
                         textDecoration: done ? "none" : "none",
+                        minWidth: 0, // Critical for preventing horizontal blowout
+                        wordBreak: "break-word",
                       }}
                     >
                       {q.title}
@@ -2378,40 +2401,45 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            boxSizing: "border-box",
           }}
         >
-          <button
-            onClick={() => {
-              questions.forEach((q) => onToggle(q.id, true));
-            }}
-            style={{
-              fontSize: 12,
-              padding: "7px 14px",
-              borderRadius: 9,
-              border: "1px solid var(--border)",
-              background: "var(--bg3)",
-              color: "var(--txt2)",
-              cursor: "pointer",
-            }}
-          >
-            Mark All Done
-          </button>
-          <button
-            onClick={() => {
-              questions.forEach((q) => onToggle(q.id, false));
-            }}
-            style={{
-              fontSize: 12,
-              padding: "7px 14px",
-              borderRadius: 9,
-              border: "1px solid var(--border)",
-              background: "var(--bg3)",
-              color: "var(--txt2)",
-              cursor: "pointer",
-            }}
-          >
-            Reset All
-          </button>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button
+              onClick={() => {
+                questions.forEach((q) => onToggle(q.id, true));
+              }}
+              style={{
+                fontSize: 12,
+                padding: "7px 14px",
+                borderRadius: 9,
+                border: "1px solid var(--border)",
+                background: "var(--bg3)",
+                color: "var(--txt2)",
+                cursor: "pointer",
+              }}
+            >
+              Mark All
+            </button>
+            <button
+              onClick={() => {
+                questions.forEach((q) => onToggle(q.id, false));
+              }}
+              style={{
+                fontSize: 12,
+                padding: "7px 14px",
+                borderRadius: 9,
+                border: "1px solid var(--border)",
+                background: "var(--bg3)",
+                color: "var(--txt2)",
+                cursor: "pointer",
+              }}
+            >
+              Reset
+            </button>
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -2423,6 +2451,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
               color: "var(--bg)",
               fontWeight: 700,
               cursor: "pointer",
+              flexShrink: 0,
             }}
           >
             Done
@@ -2495,7 +2524,7 @@ function LeetCodeCard({ username, data, loading, error, onRefresh }) {
       </div>
     );
   if (!data) return null;
-  const diffBars = [
+  const diffBars =[
     { label: "Easy", val: data.easySolved, color: "#4caf7d" },
     { label: "Medium", val: data.mediumSolved, color: "#ffa116" },
     { label: "Hard", val: data.hardSolved, color: "#ef4444" },
@@ -2777,11 +2806,8 @@ function CodeforcesCard({ username, data, loading, error, onRefresh }) {
         <div
           style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}
         >
-          {[
-            ["Rank", data.rank, rankColor, true],
-            ["Max Rating", data.maxRating || "—", "var(--txt)", false],
-            ["Contests", data.contestCount, "var(--txt)", false],
-            [
+          {[["Rank", data.rank, rankColor, true],["Max Rating", data.maxRating || "—", "var(--txt)", false],
+            ["Contests", data.contestCount, "var(--txt)", false],[
               "Contribution",
               (data.contribution >= 0 ? "+" : "") + data.contribution,
               data.contribution >= 0 ? "#4caf7d" : "var(--red)",
@@ -3231,7 +3257,7 @@ function CoreCSTab() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
+          gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
           gap: 8,
           marginBottom: 8,
         }}
@@ -3430,7 +3456,7 @@ function SkillsTab() {
     setCustomSkill("");
   }
 
-  const LEVELS = [
+  const LEVELS =[
     { val: 0, label: "–", color: "var(--txt3)" },
     { val: 1, label: "Beginner", color: "var(--red)" },
     { val: 2, label: "Intermediate", color: "var(--orange)" },
@@ -3708,14 +3734,14 @@ function CompaniesTab() {
     ctc: "",
     status: "Shortlisted",
     notes: "",
-    rounds: [],
+    rounds:[],
     applyDate: "",
   });
 
   function addCompany(e) {
     e.preventDefault();
     if (!newCo.name.trim()) return;
-    const updated = [
+    const updated =[
       { ...newCo, id: Date.now(), name: newCo.name.trim() },
       ...companies,
     ];
@@ -3728,7 +3754,7 @@ function CompaniesTab() {
       ctc: "",
       status: "Shortlisted",
       notes: "",
-      rounds: [],
+      rounds:[],
       applyDate: "",
     });
     setShowAdd(false);
@@ -3745,7 +3771,7 @@ function CompaniesTab() {
             ...c,
             rounds: c.rounds?.includes(round)
               ? c.rounds.filter((r) => r !== round)
-              : [...(c.rounds || []), round],
+              :[...(c.rounds || []), round],
           }
         : c,
     );
@@ -3811,7 +3837,7 @@ function CompaniesTab() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(2, 1fr)",
           gap: 8,
         }}
       >
@@ -4228,7 +4254,7 @@ function ResumeTab() {
   const [showAdd, setShowAdd] = useState(false);
   const [newV, setNewV] = useState({ label: "", link: "", notes: "" });
 
-  const RESUME_CHECKLIST = [
+  const RESUME_CHECKLIST =[
     {
       id: "contact",
       label: "Contact info complete (email, phone, LinkedIn, GitHub)",
@@ -4268,7 +4294,7 @@ function ResumeTab() {
   function addVersion(e) {
     e.preventDefault();
     if (!newV.label.trim()) return;
-    const u = [
+    const u =[
       {
         ...newV,
         id: Date.now(),
@@ -4714,30 +4740,30 @@ function ResumeTab() {
 
 // ── Main View ─────────────────────────────────────────────────────────────────
 export default function PlacementPrepView() {
-  const [activeTab, setActiveTab] = useState("dsa");
+  const[activeTab, setActiveTab] = useState("dsa");
 
-  const dsaSolved = useMemo(() => load("pp_dsa_solved", {}), []);
+  const dsaSolved = useMemo(() => load("pp_dsa_solved", {}),[]);
   const dsaTotal = DSA_TOPICS.reduce((s, t) => s + t.total, 0);
   const dsaDone = DSA_TOPICS.reduce((s, t) => s + (dsaSolved[t.id] || 0), 0);
   const dsaPct = Math.round((dsaDone / dsaTotal) * 100);
 
-  const coreProgress = useMemo(() => load("pp_core_progress", {}), []);
+  const coreProgress = useMemo(() => load("pp_core_progress", {}),[]);
   const coreTotal = CORE_SUBJECTS.flatMap((s) => s.topics).length;
   const coreDone = Object.values(coreProgress).filter(Boolean).length;
   const corePct = Math.round((coreDone / coreTotal) * 100);
 
-  const skills = useMemo(() => load("pp_skills", {}), []);
+  const skills = useMemo(() => load("pp_skills", {}),[]);
   const skillPct = Math.min(
     100,
     Math.round((Object.values(skills).filter((v) => v >= 3).length / 8) * 100),
   );
 
-  const resumeCheck = useMemo(() => load("pp_resume_check", {}), []);
+  const resumeCheck = useMemo(() => load("pp_resume_check", {}),[]);
   const resumePct = Math.round(
     (Object.values(resumeCheck).filter(Boolean).length / 12) * 100,
   );
 
-  const companies = useMemo(() => load("pp_companies", []), []);
+  const companies = useMemo(() => load("pp_companies", []),[]);
   const overallPct = Math.round(
     dsaPct * 0.35 + corePct * 0.25 + skillPct * 0.2 + resumePct * 0.2,
   );
@@ -4751,7 +4777,7 @@ export default function PlacementPrepView() {
           ? { label: "Getting Warmed Up 🔥", color: "var(--yellow)" }
           : { label: "Just Getting Started ⚡", color: "var(--orange)" };
 
-  const TABS = [
+  const TABS =[
     { id: "dsa", label: "DSA", emoji: "💻" },
     { id: "core", label: "Core CS", emoji: "📚" },
     { id: "skills", label: "Skills", emoji: "⚙️" },
@@ -4765,9 +4791,16 @@ export default function PlacementPrepView() {
       style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}
     >
       <style>{`
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* REMOVED 'transform' FROM THE 100% STATE SO FIXED OVERLAYS WORK PROPERLY */
+        @keyframes fadeUp { 
+          0% { opacity: 0; transform: translateY(12px); } 
+          100% { opacity: 1; transform: none; } 
+        }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { 
+          0% { opacity: 0; transform: translateY(-16px); } 
+          100% { opacity: 1; transform: none; } 
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
         .pp-fadein { animation: fadeUp .3s ease forwards; }
       `}</style>
@@ -4850,7 +4883,7 @@ export default function PlacementPrepView() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(2, 1fr)",
               gap: 8,
             }}
           >
