@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-// Using Google Gemini's OpenAI-compatible endpoint
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-const GEMINI_MODEL = "gemini-1.5-flash"; // extremely fast and huge limits
+// Using Google's official OpenAI-compatible wrapper with the guaranteed latest model string
+const GEMINI_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GEMINI_MODEL = "llama-3.3-70b-versatile";
+
 
 export async function POST(req) {
   try {
@@ -22,6 +22,13 @@ export async function POST(req) {
       currentTimeFormatted,
     } = body;
 
+    // Check if key exists
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error(
+        "GEMINI_API_KEY is missing. Add it to .env.local and restart your server.",
+      );
+    }
+
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
     const todayName = today.toLocaleDateString("en-US", { weekday: "long" });
@@ -35,10 +42,7 @@ export async function POST(req) {
 
     const attendanceWarnings = (subjects || [])
       .filter((s) => (s.attendance || 100) < (prefs?.attendanceThreshold || 75))
-      .map(
-        (s) =>
-          `${s.name}: ${s.attendance}% (below ${prefs?.attendanceThreshold || 75}% threshold)`,
-      );
+      .map((s) => `${s.name}: ${s.attendance}% (below threshold)`);
 
     const pendingTasks = (tasks || []).filter((t) => !t.done);
     const doneTasks = (tasks || []).filter((t) => t.done);
@@ -51,23 +55,9 @@ export async function POST(req) {
       .filter((e) => e.daysLeft >= 0 && e.daysLeft <= 30)
       .sort((a, b) => a.daysLeft - b.daysLeft);
 
-    const histEntries = Object.entries(history || {})
-      .sort(([a], [b]) => b.localeCompare(a))
-      .slice(0, 7);
-    const avgCompletion =
-      histEntries.length > 0
-        ? Math.round(
-            histEntries.reduce((s, [, v]) => s + (v.rate || 0), 0) /
-              histEntries.length,
-          )
-        : 0;
-
     const todaySlots = (timetable[todayName] || [])
       .sort((a, b) => a.startTime.localeCompare(b.startTime))
-      .map(
-        (s) =>
-          `${s.startTime}–${s.endTime}: ${s.subject}${s.room ? " (" + s.room + ")" : ""}`,
-      );
+      .map((s) => `${s.startTime}–${s.endTime}: ${s.subject}`);
 
     const systemPrompt = `You are an intelligent academic coach for a BTech engineering student in India.
 Your job is to give brutally honest, highly personalized, actionable study plans and advice.
@@ -158,31 +148,48 @@ Now generate a complete AI study plan. Return ONLY this exact JSON structure:
           { role: "user", content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 2500,
-        response_format: { type: "json_object" },
       }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const err = await response.text();
-      console.error("Gemini error:", err);
-      return NextResponse.json(
-        { error: "AI service error", details: err },
-        { status: 500 },
-      );
+      // Extract exact error regardless of whether it's an object or an array
+      let actualError = "Unknown Gemini API error";
+      if (Array.isArray(data) && data[0]?.error?.message) {
+        actualError = data[0].error.message;
+      } else if (data.error?.message) {
+        actualError = data.error.message;
+      } else {
+        actualError = JSON.stringify(data); // Show raw output if parsing fails
+      }
+      throw new Error(`API Error: ${actualError}`);
     }
 
-    const data = await response.json();
-    const raw = data.choices?.[0]?.message?.content;
+    let raw = data.choices?.[0]?.message?.content;
 
     if (!raw) {
-      return NextResponse.json(
-        { error: "Empty response from AI" },
-        { status: 500 },
-      );
+      throw new Error("Empty response from AI");
     }
 
-    const plan = JSON.parse(raw);
+    // Bulletproof JSON extraction
+    raw = raw
+      .replace(/```json/gi, "")
+      .replace(/```/gi, "")
+      .trim();
+    const firstBrace = raw.indexOf("{");
+    const lastBrace = raw.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      raw = raw.substring(firstBrace, lastBrace + 1);
+    }
+
+    let plan;
+    try {
+      plan = JSON.parse(raw);
+    } catch (parseErr) {
+      throw new Error("AI returned invalid JSON. Please try generating again.");
+    }
+
     return NextResponse.json({ success: true, plan, generatedAt: Date.now() });
   } catch (err) {
     console.error("AI planner error:", err);

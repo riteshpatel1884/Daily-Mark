@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 
-// Using Google Gemini's OpenAI-compatible endpoint
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GEMINI_MODEL = "llama-3.3-70b-versatile";
 
 export async function POST(req) {
   try {
     const { messages, contextData, plan } = await req.json();
+
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error(
+        "GEMINI_API_KEY is missing. Add it to .env.local and restart your server.",
+      );
+    }
 
     const systemPrompt = `You are an intelligent, supportive, and practical AI academic coach for an engineering student.
 Your goal is to answer their questions, give advice based on their current study data, and keep them motivated. Keep your answers concise, well-formatted, and friendly.
@@ -50,6 +54,25 @@ Got it! I have added Machine Learning from 12:00 AM to 1:00 AM, added a short br
 
 Make sure the JSON array inside the tags contains their ENTIRE schedule for the rest of the day, reflecting the changes requested. If they don't ask to modify the plan, just answer them normally without the tags.`;
 
+    // Format chat history so the AI doesn't crash from double-user messages
+    let validMessages = [...messages];
+    while (validMessages.length > 0 && validMessages[0].role === "assistant") {
+      validMessages.shift();
+    }
+
+    const collapsedMessages = [];
+    for (const msg of validMessages) {
+      if (
+        collapsedMessages.length > 0 &&
+        collapsedMessages[collapsedMessages.length - 1].role === msg.role
+      ) {
+        collapsedMessages[collapsedMessages.length - 1].content +=
+          "\n\n" + msg.content;
+      } else {
+        collapsedMessages.push({ ...msg });
+      }
+    }
+
     const response = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: {
@@ -58,29 +81,33 @@ Make sure the JSON array inside the tags contains their ENTIRE schedule for the 
       },
       body: JSON.stringify({
         model: GEMINI_MODEL,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...collapsedMessages,
+        ],
         temperature: 0.7,
-        max_tokens: 1500,
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      console.error("Gemini chat error:", err);
-      return NextResponse.json(
-        { error: "AI service error", details: err },
-        { status: 500 },
-      );
-    }
+   const data = await response.json();
 
-    const data = await response.json();
+   if (!response.ok) {
+     // Extract exact error regardless of whether it's an object or an array
+     let actualError = "Unknown Gemini API error";
+     if (Array.isArray(data) && data[0]?.error?.message) {
+       actualError = data[0].error.message;
+     } else if (data.error?.message) {
+       actualError = data.error.message;
+     } else {
+       actualError = JSON.stringify(data); // Show raw output if parsing fails
+     }
+     throw new Error(`API Error: ${actualError}`);
+   }
+
     const reply = data.choices?.[0]?.message?.content;
 
     if (!reply) {
-      return NextResponse.json(
-        { error: "Empty response from AI" },
-        { status: 500 },
-      );
+      throw new Error("Empty response from AI");
     }
 
     return NextResponse.json({ success: true, reply });
