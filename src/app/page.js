@@ -11,9 +11,8 @@ import AIPlannerView from "@/Components/Aiplannerview";
 import SettingsView from "@/Components/settingView";
 import HabitView from "@/Components/Heatmap";
 import PlacementPrepView from "@/Components/Placementprepview";
-
-// ✅ ADD THIS IMPORT
 import NotificationBanner from "@/Components/Notificationbanner";
+import FocusModeView from "@/Components/Focusmodeview";
 
 function App() {
   const { view } = useApp();
@@ -32,6 +31,7 @@ function App() {
         {view === "progress" && <AIPlannerView />}
         {view === "settings" && <SettingsView />}
         {view === "placement" && <PlacementPrepView />}
+        {view === "focus" && <FocusModeView />}
       </div>
       <BottomNav />
     </div>
