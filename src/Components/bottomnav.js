@@ -47,8 +47,8 @@ const PRIMARY = [
     ),
   },
   {
-    id: "timetable",
-    label: "Schedule",
+    id: "placement",
+    label: "Placement",
     icon: (
       <svg
         width="18"
@@ -60,8 +60,10 @@ const PRIMARY = [
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
+        <rect x="2" y="7" width="20" height="14" rx="2" />
+        <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+        <line x1="12" y1="12" x2="12" y2="16" />
+        <line x1="10" y1="14" x2="14" y2="14" />
       </svg>
     ),
   },
@@ -89,8 +91,8 @@ const PRIMARY = [
     ),
   },
   {
-    id: "notes",
-    label: "Notes",
+    id: "notifications",
+    label: "Alerts",
     icon: (
       <svg
         width="18"
@@ -102,10 +104,8 @@ const PRIMARY = [
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 01-3.46 0" />
       </svg>
     ),
   },
@@ -132,6 +132,28 @@ const PRIMARY = [
 ];
 
 const MORE_ITEMS = [
+  {
+    id: "timetable",
+    label: "Timetable",
+    desc: "Class schedule",
+    color: "#5b8def",
+    bg: "#5b8def15",
+    icon: (
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+  },
   {
     id: "exams",
     label: "Exam Countdown",
@@ -178,11 +200,11 @@ const MORE_ITEMS = [
     ),
   },
   {
-    id: "placement",
-    label: "Placement Prep",
-    desc: "DSA, Core CS & resume",
-    color: "#9b72cf",
-    bg: "#9b72cf15",
+    id: "notes",
+    label: "Notes",
+    desc: "Subject notes",
+    color: "#d4b44a",
+    bg: "#d4b44a15",
     icon: (
       <svg
         width="17"
@@ -194,10 +216,10 @@ const MORE_ITEMS = [
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <rect x="2" y="7" width="20" height="14" rx="2" />
-        <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-        <line x1="12" y1="12" x2="12" y2="16" />
-        <line x1="10" y1="14" x2="14" y2="14" />
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
       </svg>
     ),
   },
@@ -205,8 +227,8 @@ const MORE_ITEMS = [
     id: "progress",
     label: "Analytics",
     desc: "Progress & insights",
-    color: "#5b8def",
-    bg: "#5b8def15",
+    color: "#9b72cf",
+    bg: "#9b72cf15",
     icon: (
       <svg
         width="17"
@@ -459,11 +481,7 @@ export default function BottomNav() {
     setDrawerOpen(false);
   }
 
-  const MORE_IDS = new Set([
-    ...MORE_ITEMS.map((i) => i.id),
-    "notifications",
-    "settings",
-  ]);
+  const MORE_IDS = new Set([...MORE_ITEMS.map((i) => i.id), "settings"]);
   const moreActive = MORE_IDS.has(view);
 
   return (
@@ -509,302 +527,317 @@ export default function BottomNav() {
               zIndex: 56,
               background: "var(--bg2)",
               borderRadius: "22px 22px 0 0",
-              paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+              maxHeight: "82dvh",
+              display: "flex",
+              flexDirection: "column",
               animation: "sheetUp .26s cubic-bezier(.32,1,.5,1) both",
               boxShadow: "0 -8px 40px rgba(0,0,0,.18)",
             }}
           >
-            {/* Handle + header */}
-            <div
-              style={{
-                width: 36,
-                height: 4,
-                background: "var(--border2)",
-                borderRadius: 99,
-                margin: "12px auto 4px",
-              }}
-            />
-            <div
-              style={{
-                padding: "8px 20px 10px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span
+            {/* Handle + header — fixed, never scrolls */}
+            <div style={{ flexShrink: 0 }}>
+              <div
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: ".1em",
-                  color: "var(--txt3)",
+                  width: 36,
+                  height: 4,
+                  background: "var(--border2)",
+                  borderRadius: 99,
+                  margin: "12px auto 4px",
                 }}
-              >
-                More
-              </span>
-              <button
-                onClick={() => setDrawerOpen(false)}
+              />
+              <div
                 style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--txt3)",
-                  fontSize: 20,
-                  cursor: "pointer",
-                  lineHeight: 1,
-                  padding: 0,
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            {/* 2-col grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-                padding: "0 16px 4px",
-              }}
-            >
-              {MORE_ITEMS.map((item) => {
-                const isActive = view === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => goTo(item.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 11,
-                      padding: "13px 13px",
-                      borderRadius: 14,
-                      border: `1.5px solid ${isActive ? item.color : "var(--border)"}`,
-                      background: isActive ? item.bg : "var(--bg3)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "all .15s",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 10,
-                        background: item.bg,
-                        border: `1px solid ${item.color}33`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        color: item.color,
-                      }}
-                    >
-                      {item.icon}
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: isActive ? item.color : "var(--txt)",
-                          marginBottom: 2,
-                        }}
-                      >
-                        {item.label}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: "var(--txt3)",
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {item.desc}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Divider */}
-            <div
-              style={{
-                height: 1,
-                background: "var(--border)",
-                margin: "10px 16px 8px",
-              }}
-            />
-
-            {/* Notifications */}
-            <div style={{ padding: "0 16px 6px" }}>
-              <button
-                onClick={() => goTo("notifications")}
-                style={{
-                  width: "100%",
+                  padding: "8px 20px 10px",
                   display: "flex",
+                  justifyContent: "space-between",
                   alignItems: "center",
-                  gap: 12,
-                  padding: "11px 13px",
-                  borderRadius: 14,
-                  border: `1.5px solid ${view === "notifications" ? "#d4b44a" : "var(--border)"}`,
-                  background:
-                    view === "notifications" ? "#d4b44a15" : "var(--bg3)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "all .15s",
                 }}
               >
-                <div
+                <span
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: "#d4b44a15",
-                    border: "1px solid #d4b44a33",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    color: "#d4b44a",
-                    position: "relative",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: ".1em",
+                    color: "var(--txt3)",
                   }}
                 >
-                  <svg
-                    width="17"
-                    height="17"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                  More
+                </span>
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--txt3)",
+                    fontSize: 20,
+                    cursor: "pointer",
+                    lineHeight: 1,
+                    padding: 0,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable content */}
+            <div
+              style={{
+                overflowY: "auto",
+                flex: 1,
+                paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+              }}
+            >
+              {/* 2-col grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  padding: "0 16px 4px",
+                }}
+              >
+                {MORE_ITEMS.map((item) => {
+                  const isActive = view === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => goTo(item.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 11,
+                        padding: "13px 13px",
+                        borderRadius: 14,
+                        border: `1.5px solid ${isActive ? item.color : "var(--border)"}`,
+                        background: isActive ? item.bg : "var(--bg3)",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all .15s",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          background: item.bg,
+                          border: `1px solid ${item.color}33`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          color: item.color,
+                        }}
+                      >
+                        {item.icon}
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: isActive ? item.color : "var(--txt)",
+                            marginBottom: 2,
+                          }}
+                        >
+                          {item.label}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "var(--txt3)",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {item.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Divider */}
+              <div
+                style={{
+                  height: 1,
+                  background: "var(--border)",
+                  margin: "10px 16px 8px",
+                }}
+              />
+
+              {/* Notifications */}
+              <div style={{ padding: "0 16px 6px" }}>
+                <button
+                  onClick={() => goTo("notifications")}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "11px 13px",
+                    borderRadius: 14,
+                    border: `1.5px solid ${view === "notifications" ? "#d4b44a" : "var(--border)"}`,
+                    background:
+                      view === "notifications" ? "#d4b44a15" : "var(--bg3)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all .15s",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: "#d4b44a15",
+                      border: "1px solid #d4b44a33",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      color: "#d4b44a",
+                      position: "relative",
+                    }}
                   >
-                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 01-3.46 0" />
-                  </svg>
+                    <svg
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 01-3.46 0" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: -4,
+                          right: -4,
+                          background: "#e05252",
+                          color: "#fff",
+                          fontSize: 8,
+                          fontWeight: 800,
+                          minWidth: 14,
+                          height: 14,
+                          borderRadius: 99,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "0 3px",
+                        }}
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "var(--txt)",
+                        marginBottom: 2,
+                      }}
+                    >
+                      Notifications
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+                      Alerts & announcements
+                    </div>
+                  </div>
                   {unreadCount > 0 && (
                     <span
                       style={{
-                        position: "absolute",
-                        top: -4,
-                        right: -4,
                         background: "#e05252",
                         color: "#fff",
-                        fontSize: 8,
-                        fontWeight: 800,
-                        minWidth: 14,
-                        height: 14,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "2px 8px",
                         borderRadius: 99,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "0 3px",
                       }}
                     >
-                      {unreadCount > 9 ? "9+" : unreadCount}
+                      {unreadCount}
                     </span>
                   )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: "var(--txt)",
-                      marginBottom: 2,
-                    }}
-                  >
-                    Notifications
-                  </div>
-                  <div style={{ fontSize: 10, color: "var(--txt3)" }}>
-                    Alerts & announcements
-                  </div>
-                </div>
-                {unreadCount > 0 && (
-                  <span
-                    style={{
-                      background: "#e05252",
-                      color: "#fff",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: 99,
-                    }}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-            </div>
+                </button>
+              </div>
 
-            {/* Settings — always last */}
-            <div style={{ padding: "0 16px 0" }}>
-              <button
-                onClick={() => goTo("settings")}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "11px 13px",
-                  borderRadius: 14,
-                  border: `1.5px solid ${view === "settings" ? "var(--txt)" : "var(--border)"}`,
-                  background:
-                    view === "settings" ? "var(--accent-dim)" : "var(--bg3)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "all .15s",
-                }}
-              >
-                <div
+              {/* Settings — always last */}
+              <div style={{ padding: "0 16px 0" }}>
+                <button
+                  onClick={() => goTo("settings")}
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: "var(--bg4)",
-                    border: "1px solid var(--border)",
+                    width: "100%",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    color: "var(--txt2)",
+                    gap: 12,
+                    padding: "11px 13px",
+                    borderRadius: 14,
+                    border: `1.5px solid ${view === "settings" ? "var(--txt)" : "var(--border)"}`,
+                    background:
+                      view === "settings" ? "var(--accent-dim)" : "var(--bg3)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all .15s",
                   }}
                 >
-                  <svg
-                    width="17"
-                    height="17"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                  </svg>
-                </div>
-                <div>
                   <div
                     style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: "var(--txt)",
-                      marginBottom: 2,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: "var(--bg4)",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      color: "var(--txt2)",
                     }}
                   >
-                    Settings
+                    <svg
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                    </svg>
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--txt3)" }}>
-                    Theme, profile & preferences
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "var(--txt)",
+                        marginBottom: 2,
+                      }}
+                    >
+                      Settings
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+                      Theme, profile & preferences
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              </div>
             </div>
+            {/* end scrollable */}
           </div>
+          {/* end drawer */}
         </>
       )}
 
@@ -832,7 +865,32 @@ export default function BottomNav() {
                 style={{ position: "relative", display: "inline-flex" }}
               >
                 {item.icon}
+                {/* Badge on More button if unread */}
                 {isMore && unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -6,
+                      background: "#e05252",
+                      color: "#fff",
+                      fontSize: 8,
+                      fontWeight: 800,
+                      minWidth: 14,
+                      height: 14,
+                      borderRadius: 99,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "0 3px",
+                      border: "1.5px solid var(--bg)",
+                    }}
+                  >
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+                {/* Badge on Alerts tab */}
+                {item.id === "notifications" && unreadCount > 0 && (
                   <span
                     style={{
                       position: "absolute",
