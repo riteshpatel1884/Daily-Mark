@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 
-const ADMIN_PASSWORD = "leaderlab_admin_2026"; // Change this!
+const ADMIN_PASSWORD = process.env.ADMIN_ACCESS_PASSWORD;
 const NOTIF_KEY = "app_notifications";
 
 function getNotifs() {
