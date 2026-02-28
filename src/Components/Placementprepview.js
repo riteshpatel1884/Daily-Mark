@@ -144,12 +144,22 @@ function calcPace(targetDate, questionDone) {
   const requiredPerDay = remaining / daysLeft;
 
   const log = load("pp_activity_log", {});
-  const last7 = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return log[d.toISOString().split("T")[0]] || 0;
-  });
-  const actualPerDay = last7.reduce((a, b) => a + b, 0) / 7;
+  const today = new Date().toISOString().split("T")[0];
+
+  // Find the first day the user ever logged activity
+  const allLoggedDays = Object.keys(log).sort();
+  const firstDay = allLoggedDays.length > 0 ? allLoggedDays[0] : today;
+
+  // Count days from first active day to today (inclusive)
+  const msPerDay = 86400000;
+  const daysSinceStart = Math.max(
+    1,
+    Math.floor((new Date(today) - new Date(firstDay)) / msPerDay) + 1,
+  );
+
+  // Sum all activity across those days
+  const totalActivity = Object.values(log).reduce((a, b) => a + b, 0);
+  const actualPerDay = totalActivity / daysSinceStart;
   const projectedFinishDays =
     actualPerDay > 0 ? Math.ceil(remaining / actualPerDay) : Infinity;
   const projectedDate = new Date(now);
