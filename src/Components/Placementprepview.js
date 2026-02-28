@@ -1,1778 +1,25 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+// ─────────────────────────────────────────────────────────────────────────────
+// PlacementPrepView.jsx  —  Logic + UI only (no raw data here)
+// All question banks, constants, and config live in ./placementData.js
+// ─────────────────────────────────────────────────────────────────────────────
+import { useState, useMemo, useEffect } from "react";
+import {
+  DSA_QUESTIONS,
+  DSA_TOPICS,
+  CORE_SUBJECTS,
+  SKILL_CATEGORIES,
+  SKILL_LEVELS,
+  COMPANY_TIERS,
+  APP_STATUS,
+  STATUS_COLORS,
+  INTERVIEW_ROUNDS,
+  DIFF_CONFIG,
+  RESUME_TIPS,
+  RESUME_CHECKLIST,
+} from "../lib/data/data";
 
-// ── DSA Question Bank ─────────────────────────────────────────────────────────
-const DSA_QUESTIONS = {
-  arrays:[
-    {
-      id: "a1",
-      title: "Two Sum",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/two-sum/",
-    },
-    {
-      id: "a2",
-      title: "Best Time to Buy and Sell Stock",
-      difficulty: "Easy",
-      leetcode:
-        "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
-    },
-    {
-      id: "a3",
-      title: "Contains Duplicate",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/contains-duplicate/",
-    },
-    {
-      id: "a4",
-      title: "Maximum Subarray (Kadane's)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/maximum-subarray/",
-    },
-    {
-      id: "a5",
-      title: "Product of Array Except Self",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/product-of-array-except-self/",
-    },
-    {
-      id: "a6",
-      title: "Maximum Product Subarray",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/maximum-product-subarray/",
-    },
-    {
-      id: "a7",
-      title: "Find Minimum in Rotated Sorted Array",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/",
-    },
-    {
-      id: "a8",
-      title: "Search in Rotated Sorted Array",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/search-in-rotated-sorted-array/",
-    },
-    {
-      id: "a9",
-      title: "3Sum",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/3sum/",
-    },
-    {
-      id: "a10",
-      title: "Container With Most Water",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/container-with-most-water/",
-    },
-    {
-      id: "a11",
-      title: "Trapping Rain Water",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/trapping-rain-water/",
-    },
-    {
-      id: "a12",
-      title: "Sliding Window Maximum",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/sliding-window-maximum/",
-    },
-    {
-      id: "a13",
-      title: "Longest Substring Without Repeating",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
-    },
-    {
-      id: "a14",
-      title: "Minimum Window Substring",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/minimum-window-substring/",
-    },
-    {
-      id: "a15",
-      title: "Valid Anagram",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/valid-anagram/",
-    },
-    {
-      id: "a16",
-      title: "Group Anagrams",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/group-anagrams/",
-    },
-    {
-      id: "a17",
-      title: "Longest Consecutive Sequence",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/longest-consecutive-sequence/",
-    },
-    {
-      id: "a18",
-      title: "Rotate Array",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/rotate-array/",
-    },
-    {
-      id: "a19",
-      title: "Merge Intervals",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/merge-intervals/",
-    },
-    {
-      id: "a20",
-      title: "Insert Interval",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/insert-interval/",
-    },
-    {
-      id: "a21",
-      title: "Jump Game",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/jump-game/",
-    },
-    {
-      id: "a22",
-      title: "Jump Game II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/jump-game-ii/",
-    },
-    {
-      id: "a23",
-      title: "Next Permutation",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/next-permutation/",
-    },
-    {
-      id: "a24",
-      title: "Spiral Matrix",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/spiral-matrix/",
-    },
-    {
-      id: "a25",
-      title: "Set Matrix Zeroes",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/set-matrix-zeroes/",
-    },
-    {
-      id: "a26",
-      title: "Pascal's Triangle",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/pascals-triangle/",
-    },
-    {
-      id: "a27",
-      title: "Subarray Sum Equals K",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/subarray-sum-equals-k/",
-    },
-    {
-      id: "a28",
-      title: "Majority Element",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/majority-element/",
-    },
-    {
-      id: "a29",
-      title: "Count Inversions (Merge Sort)",
-      difficulty: "Hard",
-      leetcode:
-        "https://practice.geeksforgeeks.org/problems/inversion-of-array/0",
-    },
-    {
-      id: "a30",
-      title: "4Sum",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/4sum/",
-    },
-  ],
-  linkedlist:[
-    {
-      id: "ll1",
-      title: "Reverse Linked List",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/reverse-linked-list/",
-    },
-    {
-      id: "ll2",
-      title: "Merge Two Sorted Lists",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/merge-two-sorted-lists/",
-    },
-    {
-      id: "ll3",
-      title: "Linked List Cycle",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/linked-list-cycle/",
-    },
-    {
-      id: "ll4",
-      title: "Linked List Cycle II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/linked-list-cycle-ii/",
-    },
-    {
-      id: "ll5",
-      title: "Find the Duplicate Number",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/find-the-duplicate-number/",
-    },
-    {
-      id: "ll6",
-      title: "LRU Cache",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/lru-cache/",
-    },
-    {
-      id: "ll7",
-      title: "Merge K Sorted Lists",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/merge-k-sorted-lists/",
-    },
-    {
-      id: "ll8",
-      title: "Remove Nth Node From End",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/remove-nth-node-from-end-of-list/",
-    },
-    {
-      id: "ll9",
-      title: "Reorder List",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/reorder-list/",
-    },
-    {
-      id: "ll10",
-      title: "Palindrome Linked List",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/palindrome-linked-list/",
-    },
-    {
-      id: "ll11",
-      title: "Intersection of Two Linked Lists",
-      difficulty: "Easy",
-      leetcode:
-        "https://leetcode.com/problems/intersection-of-two-linked-lists/",
-    },
-    {
-      id: "ll12",
-      title: "Add Two Numbers",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/add-two-numbers/",
-    },
-    {
-      id: "ll13",
-      title: "Sort List (Merge Sort on LL)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/sort-list/",
-    },
-    {
-      id: "ll14",
-      title: "Flatten a Multilevel Doubly LL",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/flatten-a-multilevel-doubly-linked-list/",
-    },
-    {
-      id: "ll15",
-      title: "Rotate List",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/rotate-list/",
-    },
-    {
-      id: "ll16",
-      title: "Copy List with Random Pointer",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/copy-list-with-random-pointer/",
-    },
-    {
-      id: "ll17",
-      title: "Swap Nodes in Pairs",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/swap-nodes-in-pairs/",
-    },
-    {
-      id: "ll18",
-      title: "Reverse Nodes in k-Group",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/reverse-nodes-in-k-group/",
-    },
-    {
-      id: "ll19",
-      title: "Delete Node in a Linked List",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/delete-node-in-a-linked-list/",
-    },
-    {
-      id: "ll20",
-      title: "Middle of the Linked List",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/middle-of-the-linked-list/",
-    },
-  ],
-  stacks:[
-    {
-      id: "sq1",
-      title: "Valid Parentheses",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/valid-parentheses/",
-    },
-    {
-      id: "sq2",
-      title: "Min Stack",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/min-stack/",
-    },
-    {
-      id: "sq3",
-      title: "Evaluate Reverse Polish Notation",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/evaluate-reverse-polish-notation/",
-    },
-    {
-      id: "sq4",
-      title: "Generate Parentheses",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/generate-parentheses/",
-    },
-    {
-      id: "sq5",
-      title: "Daily Temperatures",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/daily-temperatures/",
-    },
-    {
-      id: "sq6",
-      title: "Car Fleet",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/car-fleet/",
-    },
-    {
-      id: "sq7",
-      title: "Largest Rectangle in Histogram",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/largest-rectangle-in-histogram/",
-    },
-    {
-      id: "sq8",
-      title: "Next Greater Element I",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/next-greater-element-i/",
-    },
-    {
-      id: "sq9",
-      title: "Next Greater Element II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/next-greater-element-ii/",
-    },
-    {
-      id: "sq10",
-      title: "Implement Queue using Stacks",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/implement-queue-using-stacks/",
-    },
-    {
-      id: "sq11",
-      title: "Implement Stack using Queues",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/implement-stack-using-queues/",
-    },
-    {
-      id: "sq12",
-      title: "Decode String",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/decode-string/",
-    },
-    {
-      id: "sq13",
-      title: "Remove K Digits",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/remove-k-digits/",
-    },
-    {
-      id: "sq14",
-      title: "Asteroid Collision",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/asteroid-collision/",
-    },
-    {
-      id: "sq15",
-      title: "Sliding Window Maximum",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/sliding-window-maximum/",
-    },
-  ],
-  trees:[
-    {
-      id: "t1",
-      title: "Invert Binary Tree",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/invert-binary-tree/",
-    },
-    {
-      id: "t2",
-      title: "Maximum Depth of Binary Tree",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/maximum-depth-of-binary-tree/",
-    },
-    {
-      id: "t3",
-      title: "Diameter of Binary Tree",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/diameter-of-binary-tree/",
-    },
-    {
-      id: "t4",
-      title: "Balanced Binary Tree",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/balanced-binary-tree/",
-    },
-    {
-      id: "t5",
-      title: "Same Tree",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/same-tree/",
-    },
-    {
-      id: "t6",
-      title: "Subtree of Another Tree",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/subtree-of-another-tree/",
-    },
-    {
-      id: "t7",
-      title: "Lowest Common Ancestor of BST",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/",
-    },
-    {
-      id: "t8",
-      title: "Binary Tree Level Order Traversal",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/binary-tree-level-order-traversal/",
-    },
-    {
-      id: "t9",
-      title: "Binary Tree Right Side View",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/binary-tree-right-side-view/",
-    },
-    {
-      id: "t10",
-      title: "Count Good Nodes in Binary Tree",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/count-good-nodes-in-binary-tree/",
-    },
-    {
-      id: "t11",
-      title: "Validate Binary Search Tree",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/validate-binary-search-tree/",
-    },
-    {
-      id: "t12",
-      title: "Kth Smallest Element in a BST",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/kth-smallest-element-in-a-bst/",
-    },
-    {
-      id: "t13",
-      title: "Construct BT from Preorder & Inorder",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/",
-    },
-    {
-      id: "t14",
-      title: "Binary Tree Maximum Path Sum",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/binary-tree-maximum-path-sum/",
-    },
-    {
-      id: "t15",
-      title: "Serialize and Deserialize Binary Tree",
-      difficulty: "Hard",
-      leetcode:
-        "https://leetcode.com/problems/serialize-and-deserialize-binary-tree/",
-    },
-    {
-      id: "t16",
-      title: "Word Search II (Trie + Tree)",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/word-search-ii/",
-    },
-    {
-      id: "t17",
-      title: "Path Sum II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/path-sum-ii/",
-    },
-    {
-      id: "t18",
-      title: "Flatten Binary Tree to Linked List",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/flatten-binary-tree-to-linked-list/",
-    },
-    {
-      id: "t19",
-      title: "Zigzag Level Order Traversal",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/",
-    },
-    {
-      id: "t20",
-      title: "Morris Inorder Traversal",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/binary-tree-inorder-traversal/",
-    },
-    {
-      id: "t21",
-      title: "Delete Node in a BST",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/delete-node-in-a-bst/",
-    },
-    {
-      id: "t22",
-      title: "Insert into a BST",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/insert-into-a-binary-search-tree/",
-    },
-    {
-      id: "t23",
-      title: "Recover Binary Search Tree",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/recover-binary-search-tree/",
-    },
-    {
-      id: "t24",
-      title: "Vertical Order Traversal",
-      difficulty: "Hard",
-      leetcode:
-        "https://leetcode.com/problems/vertical-order-traversal-of-a-binary-tree/",
-    },
-    {
-      id: "t25",
-      title: "Boundary of Binary Tree",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/boundary-of-binary-tree/",
-    },
-  ],
-  graphs:[
-    {
-      id: "g1",
-      title: "Number of Islands",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/number-of-islands/",
-    },
-    {
-      id: "g2",
-      title: "Clone Graph",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/clone-graph/",
-    },
-    {
-      id: "g3",
-      title: "Max Area of Island",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/max-area-of-island/",
-    },
-    {
-      id: "g4",
-      title: "Pacific Atlantic Water Flow",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/pacific-atlantic-water-flow/",
-    },
-    {
-      id: "g5",
-      title: "Surrounded Regions",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/surrounded-regions/",
-    },
-    {
-      id: "g6",
-      title: "Rotting Oranges",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/rotting-oranges/",
-    },
-    {
-      id: "g7",
-      title: "Walls and Gates",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/walls-and-gates/",
-    },
-    {
-      id: "g8",
-      title: "Course Schedule (Topological Sort)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/course-schedule/",
-    },
-    {
-      id: "g9",
-      title: "Course Schedule II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/course-schedule-ii/",
-    },
-    {
-      id: "g10",
-      title: "Redundant Connection",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/redundant-connection/",
-    },
-    {
-      id: "g11",
-      title: "Number of Connected Components",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/number-of-connected-components-in-an-undirected-graph/",
-    },
-    {
-      id: "g12",
-      title: "Graph Valid Tree",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/graph-valid-tree/",
-    },
-    {
-      id: "g13",
-      title: "Word Ladder",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/word-ladder/",
-    },
-    {
-      id: "g14",
-      title: "Alien Dictionary",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/alien-dictionary/",
-    },
-    {
-      id: "g15",
-      title: "Dijkstra's Shortest Path",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/network-delay-time/",
-    },
-    {
-      id: "g16",
-      title: "Cheapest Flights Within K Stops",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/cheapest-flights-within-k-stops/",
-    },
-    {
-      id: "g17",
-      title: "Swim in Rising Water",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/swim-in-rising-water/",
-    },
-    {
-      id: "g18",
-      title: "Bellman-Ford - Negative Cycles",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors/",
-    },
-    {
-      id: "g19",
-      title: "Minimum Spanning Tree (Kruskal)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/min-cost-to-connect-all-points/",
-    },
-    {
-      id: "g20",
-      title: "Strongly Connected Components",
-      difficulty: "Hard",
-      leetcode:
-        "https://practice.geeksforgeeks.org/problems/strongly-connected-components-kosarajus-algo/1",
-    },
-    {
-      id: "g21",
-      title: "Bipartite Graph Check",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/is-graph-bipartite/",
-    },
-    {
-      id: "g22",
-      title: "Find Eventual Safe States",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/find-eventual-safe-states/",
-    },
-    {
-      id: "g23",
-      title: "As Far from Land as Possible",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/as-far-from-land-as-possible/",
-    },
-    {
-      id: "g24",
-      title: "Snakes and Ladders",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/snakes-and-ladders/",
-    },
-    {
-      id: "g25",
-      title: "Critical Connections (Bridges)",
-      difficulty: "Hard",
-      leetcode:
-        "https://leetcode.com/problems/critical-connections-in-a-network/",
-    },
-  ],
-  dp:[
-    {
-      id: "dp1",
-      title: "Climbing Stairs",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/climbing-stairs/",
-    },
-    {
-      id: "dp2",
-      title: "House Robber",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/house-robber/",
-    },
-    {
-      id: "dp3",
-      title: "House Robber II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/house-robber-ii/",
-    },
-    {
-      id: "dp4",
-      title: "Longest Palindromic Substring",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/longest-palindromic-substring/",
-    },
-    {
-      id: "dp5",
-      title: "Palindromic Substrings",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/palindromic-substrings/",
-    },
-    {
-      id: "dp6",
-      title: "Decode Ways",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/decode-ways/",
-    },
-    {
-      id: "dp7",
-      title: "Coin Change",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/coin-change/",
-    },
-    {
-      id: "dp8",
-      title: "Maximum Product Subarray",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/maximum-product-subarray/",
-    },
-    {
-      id: "dp9",
-      title: "Word Break",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/word-break/",
-    },
-    {
-      id: "dp10",
-      title: "Longest Increasing Subsequence",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/longest-increasing-subsequence/",
-    },
-    {
-      id: "dp11",
-      title: "Can I Win",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/can-i-win/",
-    },
-    {
-      id: "dp12",
-      title: "Unique Paths",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/unique-paths/",
-    },
-    {
-      id: "dp13",
-      title: "Jump Game",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/jump-game/",
-    },
-    {
-      id: "dp14",
-      title: "0/1 Knapsack",
-      difficulty: "Medium",
-      leetcode:
-        "https://practice.geeksforgeeks.org/problems/0-1-knapsack-problem/0",
-    },
-    {
-      id: "dp15",
-      title: "Partition Equal Subset Sum",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/partition-equal-subset-sum/",
-    },
-    {
-      id: "dp16",
-      title: "Target Sum",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/target-sum/",
-    },
-    {
-      id: "dp17",
-      title: "Interleaving String",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/interleaving-string/",
-    },
-    {
-      id: "dp18",
-      title: "Longest Common Subsequence",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/longest-common-subsequence/",
-    },
-    {
-      id: "dp19",
-      title: "Edit Distance",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/edit-distance/",
-    },
-    {
-      id: "dp20",
-      title: "Burst Balloons",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/burst-balloons/",
-    },
-    {
-      id: "dp21",
-      title: "Regular Expression Matching",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/regular-expression-matching/",
-    },
-    {
-      id: "dp22",
-      title: "Wildcard Matching",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/wildcard-matching/",
-    },
-    {
-      id: "dp23",
-      title: "Distinct Subsequences",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/distinct-subsequences/",
-    },
-    {
-      id: "dp24",
-      title: "Matrix Chain Multiplication",
-      difficulty: "Hard",
-      leetcode:
-        "https://practice.geeksforgeeks.org/problems/matrix-chain-multiplication0303/1",
-    },
-    {
-      id: "dp25",
-      title: "Maximal Rectangle",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/maximal-rectangle/",
-    },
-    {
-      id: "dp26",
-      title: "Longest String Chain",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/longest-string-chain/",
-    },
-    {
-      id: "dp27",
-      title: "Ugly Number II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/ugly-number-ii/",
-    },
-    {
-      id: "dp28",
-      title: "Minimum Path Sum",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/minimum-path-sum/",
-    },
-    {
-      id: "dp29",
-      title: "Triangle",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/triangle/",
-    },
-    {
-      id: "dp30",
-      title: "Russian Doll Envelopes",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/russian-doll-envelopes/",
-    },
-  ],
-  recursion:[
-    {
-      id: "r1",
-      title: "Subsets",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/subsets/",
-    },
-    {
-      id: "r2",
-      title: "Subsets II (with duplicates)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/subsets-ii/",
-    },
-    {
-      id: "r3",
-      title: "Permutations",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/permutations/",
-    },
-    {
-      id: "r4",
-      title: "Permutations II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/permutations-ii/",
-    },
-    {
-      id: "r5",
-      title: "Combination Sum",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/combination-sum/",
-    },
-    {
-      id: "r6",
-      title: "Combination Sum II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/combination-sum-ii/",
-    },
-    {
-      id: "r7",
-      title: "N-Queens",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/n-queens/",
-    },
-    {
-      id: "r8",
-      title: "Sudoku Solver",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/sudoku-solver/",
-    },
-    {
-      id: "r9",
-      title: "Word Search",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/word-search/",
-    },
-    {
-      id: "r10",
-      title: "Letter Combinations of Phone Number",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/letter-combinations-of-a-phone-number/",
-    },
-    {
-      id: "r11",
-      title: "Palindrome Partitioning",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/palindrome-partitioning/",
-    },
-    {
-      id: "r12",
-      title: "Restore IP Addresses",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/restore-ip-addresses/",
-    },
-    {
-      id: "r13",
-      title: "Generate Parentheses",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/generate-parentheses/",
-    },
-    {
-      id: "r14",
-      title: "Rat in a Maze",
-      difficulty: "Medium",
-      leetcode:
-        "https://practice.geeksforgeeks.org/problems/rat-in-a-maze-problem/1",
-    },
-    {
-      id: "r15",
-      title: "M-Coloring Problem",
-      difficulty: "Medium",
-      leetcode:
-        "https://practice.geeksforgeeks.org/problems/m-coloring-problem-1587115620/1",
-    },
-    {
-      id: "r16",
-      title: "Power Set",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/subsets/",
-    },
-    {
-      id: "r17",
-      title: "Knight's Tour",
-      difficulty: "Hard",
-      leetcode: "https://practice.geeksforgeeks.org/problems/knights-tour/0",
-    },
-    {
-      id: "r18",
-      title: "Expression Add Operators",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/expression-add-operators/",
-    },
-    {
-      id: "r19",
-      title: "Beautiful Arrangement",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/beautiful-arrangement/",
-    },
-    {
-      id: "r20",
-      title: "Unique Binary Search Trees II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/unique-binary-search-trees-ii/",
-    },
-  ],
-  sorting:[
-    {
-      id: "s1",
-      title: "Sort Colors (Dutch Flag)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/sort-colors/",
-    },
-    {
-      id: "s2",
-      title: "Merge Sorted Array",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/merge-sorted-array/",
-    },
-    {
-      id: "s3",
-      title: "Kth Largest Element",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/kth-largest-element-in-an-array/",
-    },
-    {
-      id: "s4",
-      title: "Find K Closest Elements",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/find-k-closest-elements/",
-    },
-    {
-      id: "s5",
-      title: "Sort an Array (Quicksort / Mergesort)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/sort-an-array/",
-    },
-    {
-      id: "s6",
-      title: "Largest Number",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/largest-number/",
-    },
-    {
-      id: "s7",
-      title: "Meeting Rooms II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/meeting-rooms-ii/",
-    },
-    {
-      id: "s8",
-      title: "Binary Search",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/binary-search/",
-    },
-    {
-      id: "s9",
-      title: "Search a 2D Matrix",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/search-a-2d-matrix/",
-    },
-    {
-      id: "s10",
-      title: "Median of Two Sorted Arrays",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/median-of-two-sorted-arrays/",
-    },
-    {
-      id: "s11",
-      title: "First Bad Version",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/first-bad-version/",
-    },
-    {
-      id: "s12",
-      title: "Count of Smaller Numbers After Self",
-      difficulty: "Hard",
-      leetcode:
-        "https://leetcode.com/problems/count-of-smaller-numbers-after-self/",
-    },
-    {
-      id: "s13",
-      title: "Wiggle Sort II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/wiggle-sort-ii/",
-    },
-    {
-      id: "s14",
-      title: "H-Index",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/h-index/",
-    },
-    {
-      id: "s15",
-      title: "Capacity to Ship Packages",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/",
-    },
-  ],
-  greedy:[
-    {
-      id: "gr1",
-      title: "Maximum Subarray",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/maximum-subarray/",
-    },
-    {
-      id: "gr2",
-      title: "Jump Game",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/jump-game/",
-    },
-    {
-      id: "gr3",
-      title: "Jump Game II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/jump-game-ii/",
-    },
-    {
-      id: "gr4",
-      title: "Gas Station",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/gas-station/",
-    },
-    {
-      id: "gr5",
-      title: "Hand of Straights",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/hand-of-straights/",
-    },
-    {
-      id: "gr6",
-      title: "Merge Triplets to Form Target",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/merge-triplets-to-form-target-triplet/",
-    },
-    {
-      id: "gr7",
-      title: "Partition Labels",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/partition-labels/",
-    },
-    {
-      id: "gr8",
-      title: "Valid Parenthesis String",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/valid-parenthesis-string/",
-    },
-    {
-      id: "gr9",
-      title: "Task Scheduler",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/task-scheduler/",
-    },
-    {
-      id: "gr10",
-      title: "Assign Cookies",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/assign-cookies/",
-    },
-    {
-      id: "gr11",
-      title: "Non-overlapping Intervals",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/non-overlapping-intervals/",
-    },
-    {
-      id: "gr12",
-      title: "Meeting Rooms",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/meeting-rooms/",
-    },
-    {
-      id: "gr13",
-      title: "Minimum Number of Arrows",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/",
-    },
-    {
-      id: "gr14",
-      title: "Lemonade Change",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/lemonade-change/",
-    },
-    {
-      id: "gr15",
-      title: "Candy",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/candy/",
-    },
-  ],
-  hashing:[
-    {
-      id: "h1",
-      title: "Two Sum",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/two-sum/",
-    },
-    {
-      id: "h2",
-      title: "Group Anagrams",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/group-anagrams/",
-    },
-    {
-      id: "h3",
-      title: "Top K Frequent Elements",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/top-k-frequent-elements/",
-    },
-    {
-      id: "h4",
-      title: "Valid Anagram",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/valid-anagram/",
-    },
-    {
-      id: "h5",
-      title: "Longest Consecutive Sequence",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/longest-consecutive-sequence/",
-    },
-    {
-      id: "h6",
-      title: "Subarray Sum Equals K",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/subarray-sum-equals-k/",
-    },
-    {
-      id: "h7",
-      title: "4Sum II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/4sum-ii/",
-    },
-    {
-      id: "h8",
-      title: "Happy Number",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/happy-number/",
-    },
-    {
-      id: "h9",
-      title: "Isomorphic Strings",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/isomorphic-strings/",
-    },
-    {
-      id: "h10",
-      title: "Word Pattern",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/word-pattern/",
-    },
-    {
-      id: "h11",
-      title: "Find All Anagrams in a String",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/find-all-anagrams-in-a-string/",
-    },
-    {
-      id: "h12",
-      title: "Brick Wall",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/brick-wall/",
-    },
-  ],
-  heap:[
-    {
-      id: "hp1",
-      title: "Kth Largest Element in a Stream",
-      difficulty: "Easy",
-      leetcode:
-        "https://leetcode.com/problems/kth-largest-element-in-a-stream/",
-    },
-    {
-      id: "hp2",
-      title: "Last Stone Weight",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/last-stone-weight/",
-    },
-    {
-      id: "hp3",
-      title: "K Closest Points to Origin",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/k-closest-points-to-origin/",
-    },
-    {
-      id: "hp4",
-      title: "Kth Largest Element in an Array",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/kth-largest-element-in-an-array/",
-    },
-    {
-      id: "hp5",
-      title: "Task Scheduler",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/task-scheduler/",
-    },
-    {
-      id: "hp6",
-      title: "Design Twitter",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/design-twitter/",
-    },
-    {
-      id: "hp7",
-      title: "Find Median from Data Stream",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/find-median-from-data-stream/",
-    },
-    {
-      id: "hp8",
-      title: "Merge K Sorted Lists",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/merge-k-sorted-lists/",
-    },
-    {
-      id: "hp9",
-      title: "Top K Frequent Words",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/top-k-frequent-words/",
-    },
-    {
-      id: "hp10",
-      title: "Reorganize String",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/reorganize-string/",
-    },
-    {
-      id: "hp11",
-      title: "Minimum Cost to Connect Sticks",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/minimum-cost-to-connect-sticks/",
-    },
-    {
-      id: "hp12",
-      title: "IPO (Maximize Capital)",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/ipo/",
-    },
-  ],
-  trie:[
-    {
-      id: "tr1",
-      title: "Implement Trie",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/implement-trie-prefix-tree/",
-    },
-    {
-      id: "tr2",
-      title: "Design Add and Search Words",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/design-add-and-search-words-data-structure/",
-    },
-    {
-      id: "tr3",
-      title: "Word Search II",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/word-search-ii/",
-    },
-    {
-      id: "tr4",
-      title: "Replace Words",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/replace-words/",
-    },
-    {
-      id: "tr5",
-      title: "Maximum XOR of Two Numbers",
-      difficulty: "Medium",
-      leetcode:
-        "https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/",
-    },
-    {
-      id: "tr6",
-      title: "Count Words With a Given Prefix",
-      difficulty: "Easy",
-      leetcode:
-        "https://leetcode.com/problems/count-words-with-a-given-prefix/",
-    },
-    {
-      id: "tr7",
-      title: "Longest Word in Dictionary",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/longest-word-in-dictionary/",
-    },
-    {
-      id: "tr8",
-      title: "Autocomplete System",
-      difficulty: "Hard",
-      leetcode:
-        "https://leetcode.com/problems/design-search-autocomplete-system/",
-    },
-    {
-      id: "tr9",
-      title: "Concatenated Words",
-      difficulty: "Hard",
-      leetcode: "https://leetcode.com/problems/concatenated-words/",
-    },
-    {
-      id: "tr10",
-      title: "Map Sum Pairs",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/map-sum-pairs/",
-    },
-  ],
-  bitmanip:[
-    {
-      id: "b1",
-      title: "Single Number",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/single-number/",
-    },
-    {
-      id: "b2",
-      title: "Number of 1 Bits",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/number-of-1-bits/",
-    },
-    {
-      id: "b3",
-      title: "Counting Bits",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/counting-bits/",
-    },
-    {
-      id: "b4",
-      title: "Reverse Bits",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/reverse-bits/",
-    },
-    {
-      id: "b5",
-      title: "Missing Number",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/missing-number/",
-    },
-    {
-      id: "b6",
-      title: "Sum of Two Integers (No + operator)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/sum-of-two-integers/",
-    },
-    {
-      id: "b7",
-      title: "Power of Two",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/power-of-two/",
-    },
-    {
-      id: "b8",
-      title: "Single Number II",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/single-number-ii/",
-    },
-    {
-      id: "b9",
-      title: "Single Number III",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/single-number-iii/",
-    },
-    {
-      id: "b10",
-      title: "Bitwise AND of Numbers Range",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/bitwise-and-of-numbers-range/",
-    },
-  ],
-  math:[
-    {
-      id: "m1",
-      title: "Palindrome Number",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/palindrome-number/",
-    },
-    {
-      id: "m2",
-      title: "Plus One",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/plus-one/",
-    },
-    {
-      id: "m3",
-      title: "Sqrt(x) — Newton's Method",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/sqrtx/",
-    },
-    {
-      id: "m4",
-      title: "Power(x, n) — Fast Exponentiation",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/powx-n/",
-    },
-    {
-      id: "m5",
-      title: "Count Primes (Sieve)",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/count-primes/",
-    },
-    {
-      id: "m6",
-      title: "Excel Sheet Column Number",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/excel-sheet-column-number/",
-    },
-    {
-      id: "m7",
-      title: "Factorial Trailing Zeroes",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/factorial-trailing-zeroes/",
-    },
-    {
-      id: "m8",
-      title: "GCD & LCM",
-      difficulty: "Easy",
-      leetcode: "https://practice.geeksforgeeks.org/problems/lcm-and-gcd4516/1",
-    },
-    {
-      id: "m9",
-      title: "Multiply Strings",
-      difficulty: "Medium",
-      leetcode: "https://leetcode.com/problems/multiply-strings/",
-    },
-    {
-      id: "m10",
-      title: "Ugly Number",
-      difficulty: "Easy",
-      leetcode: "https://leetcode.com/problems/ugly-number/",
-    },
-  ],
-};
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-const DSA_TOPICS =[
-  { id: "arrays", label: "Arrays & Strings", total: 30 },
-  { id: "linkedlist", label: "Linked Lists", total: 20 },
-  { id: "stacks", label: "Stacks & Queues", total: 15 },
-  { id: "trees", label: "Trees & BST", total: 25 },
-  { id: "graphs", label: "Graphs", total: 25 },
-  { id: "dp", label: "Dynamic Programming", total: 30 },
-  { id: "recursion", label: "Recursion & Backtracking", total: 20 },
-  { id: "sorting", label: "Sorting & Searching", total: 15 },
-  { id: "greedy", label: "Greedy Algorithms", total: 15 },
-  { id: "hashing", label: "Hashing", total: 12 },
-  { id: "heap", label: "Heaps & Priority Queue", total: 12 },
-  { id: "trie", label: "Trie & Advanced DS", total: 10 },
-  { id: "bitmanip", label: "Bit Manipulation", total: 10 },
-  { id: "math", label: "Math & Number Theory", total: 10 },
-];
-
-const CORE_SUBJECTS =[
-  {
-    id: "os",
-    label: "Operating Systems",
-    topics:[
-      "Processes & Threads",
-      "Memory Management",
-      "Deadlocks",
-      "File Systems",
-      "Scheduling",
-      "Synchronization",
-    ],
-  },
-  {
-    id: "dbms",
-    label: "DBMS",
-    topics:[
-      "SQL Queries",
-      "Normalization",
-      "Transactions & ACID",
-      "Indexing",
-      "ER Diagrams",
-      "NoSQL Basics",
-    ],
-  },
-  {
-    id: "cn",
-    label: "Computer Networks",
-    topics:[
-      "OSI / TCP-IP Model",
-      "TCP vs UDP",
-      "HTTP / HTTPS",
-      "DNS & DHCP",
-      "Routing Algorithms",
-      "Socket Programming",
-    ],
-  },
-  {
-    id: "oops",
-    label: "OOP Concepts",
-    topics:[
-      "Inheritance & Polymorphism",
-      "Abstraction & Encapsulation",
-      "Design Patterns",
-      "SOLID Principles",
-      "Java / C++ specifics",
-    ],
-  },
-  {
-    id: "algo",
-    label: "Algorithms",
-    topics:[
-      "Time & Space Complexity",
-      "Divide & Conquer",
-      "Graph Algorithms",
-      "String Algorithms",
-      "NP Completeness",
-    ],
-  },
-];
-
-const SKILL_CATEGORIES = [
-  {
-    id: "lang",
-    label: "Languages",
-    items:["C++", "Java", "Python", "JavaScript", "Go", "Rust"],
-  },
-  {
-    id: "web",
-    label: "Web / Backend",
-    items:[
-      "React",
-      "Node.js",
-      "Express",
-      "Django",
-      "Spring Boot",
-      "FastAPI",
-      "REST APIs",
-      "GraphQL",
-    ],
-  },
-  {
-    id: "devops",
-    label: "DevOps & Cloud",
-    items:[
-      "Git & GitHub",
-      "Docker",
-      "Kubernetes",
-      "AWS",
-      "GCP",
-      "CI/CD",
-      "Linux",
-    ],
-  },
-  {
-    id: "ml",
-    label: "ML / Data",
-    items:[
-      "NumPy / Pandas",
-      "Scikit-learn",
-      "TensorFlow / PyTorch",
-      "SQL",
-      "Data Visualization",
-      "Statistics",
-    ],
-  },
-];
-
-const COMPANY_TIERS =[
-  {
-    id: "dream",
-    label: "Dream",
-    color: "#d4b44a",
-    bg: "var(--yellow)15",
-    border: "var(--yellow)44",
-  },
-  {
-    id: "super",
-    label: "Super Dream",
-    color: "#9b72cf",
-    bg: "var(--purple)15",
-    border: "var(--purple)44",
-  },
-  {
-    id: "product",
-    label: "Product",
-    color: "#5b8def",
-    bg: "var(--blue)15",
-    border: "var(--blue)44",
-  },
-  {
-    id: "service",
-    label: "Service",
-    color: "#4caf7d",
-    bg: "#4caf7d15",
-    border: "#4caf7d44",
-  },
-  {
-    id: "startup",
-    label: "Startup",
-    color: "#e8924a",
-    bg: "var(--orange)15",
-    border: "var(--orange)44",
-  },
-];
-
-const APP_STATUS =[
-  "Shortlisted",
-  "OA Sent",
-  "OA Done",
-  "Interview",
-  "Offer",
-  "Rejected",
-];
-const STATUS_COLORS = {
-  Shortlisted: { color: "var(--blue)", bg: "var(--blue)18" },
-  "OA Sent": { color: "var(--yellow)", bg: "var(--yellow)18" },
-  "OA Done": { color: "var(--orange)", bg: "var(--orange)18" },
-  Interview: { color: "var(--purple)", bg: "var(--purple)18" },
-  Offer: { color: "#4caf7d", bg: "#4caf7d18" },
-  Rejected: { color: "var(--red)", bg: "var(--red)18" },
-};
-
-const RESUME_TIPS =[
-  "Keep resume to 1 page for < 3 years experience",
-  "Quantify every achievement (e.g. 'improved speed by 40%')",
-  "Use action verbs: Built, Designed, Optimized, Led",
-  "Add GitHub, LinkedIn, LeetCode profile links",
-  "List tech stack used in each project",
-  "No photo, no DOB, no address needed",
-  "ATS-friendly: avoid tables/columns/graphics",
-  "Tailor keywords to each job description",
-];
-
-const INTERVIEW_ROUNDS =[
-  "Coding Round",
-  "Technical Round 1",
-  "Technical Round 2",
-  "System Design",
-  "HR Round",
-  "Manager Round",
-];
-
-const DIFF_CONFIG = {
-  Easy: { color: "#4caf7d", bg: "#4caf7d18" },
-  Medium: { color: "#ffa116", bg: "#ffa11618" },
-  Hard: { color: "#ef4444", bg: "#ef444418" },
-};
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── localStorage helpers ──────────────────────────────────────────────────────
 function load(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key) || "null") ?? fallback;
@@ -1788,7 +35,7 @@ function save(key, val) {
 
 // ── API Fetchers ──────────────────────────────────────────────────────────────
 async function fetchLeetCodeStats(username) {
-  const urls =[
+  const urls = [
     `https://leetcode-stats-api.herokuapp.com/${username}`,
     `https://alfa-leetcode-api.0x10.workers.dev/userProfile/${username}`,
   ];
@@ -1797,28 +44,16 @@ async function fetchLeetCodeStats(username) {
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) continue;
       const data = await res.json();
-      if (data.status === "success" && data.totalSolved !== undefined) {
+      if (data.totalSolved !== undefined)
         return {
           totalSolved: data.totalSolved,
           easySolved: data.easySolved,
           mediumSolved: data.mediumSolved,
           hardSolved: data.hardSolved,
           ranking: data.ranking,
-          acceptanceRate: data.acceptanceRate,
+          acceptanceRate: data.acceptanceRate ?? null,
           totalQuestions: data.totalQuestions,
         };
-      }
-      if (data.totalSolved !== undefined) {
-        return {
-          totalSolved: data.totalSolved,
-          easySolved: data.easySolved,
-          mediumSolved: data.mediumSolved,
-          hardSolved: data.hardSolved,
-          ranking: data.ranking,
-          acceptanceRate: null,
-          totalQuestions: data.totalQuestions,
-        };
-      }
     } catch {
       continue;
     }
@@ -1842,8 +77,8 @@ async function fetchCodeforcesStats(username) {
   const user = infoData.result[0];
   let contestCount = 0;
   if (ratingRes.ok) {
-    const ratingData = await ratingRes.json();
-    if (ratingData.status === "OK") contestCount = ratingData.result.length;
+    const rd = await ratingRes.json();
+    if (rd.status === "OK") contestCount = rd.result.length;
   }
   return {
     handle: user.handle,
@@ -1872,10 +107,10 @@ function cfRankColor(rank = "") {
   return "#808080";
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Shared UI atoms ───────────────────────────────────────────────────────────
 function RadialProgress({ pct, size = 56, stroke = 5, color = "var(--blue)" }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
+  const r = (size - stroke) / 2,
+    c = 2 * Math.PI * r;
   return (
     <svg
       width={size}
@@ -1994,7 +229,22 @@ function SectionHeader({ title, subtitle }) {
   );
 }
 
-// ── Question Popup Modal ──────────────────────────────────────────────────────
+// ── Checkmark SVG ─────────────────────────────────────────────────────────────
+const Check = () => (
+  <svg
+    width="11"
+    height="11"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="white"
+    strokeWidth="3"
+    strokeLinecap="round"
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+// ── Question Modal ────────────────────────────────────────────────────────────
 function QuestionModal({ topic, doneMap, onToggle, onClose }) {
   const questions = DSA_QUESTIONS[topic.id] || [];
   const [filter, setFilter] = useState("All");
@@ -2002,6 +252,14 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
 
   const doneCount = questions.filter((q) => doneMap[q.id]).length;
   const pct = Math.round((doneCount / questions.length) * 100);
+  const topicColor =
+    pct === 100
+      ? "#4caf7d"
+      : pct >= 60
+        ? "var(--blue)"
+        : pct >= 30
+          ? "var(--orange)"
+          : "var(--red)";
 
   const filtered = questions.filter((q) => {
     const matchDiff = filter === "All" || q.difficulty === filter;
@@ -2013,12 +271,6 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
   const diffCounts = { Easy: 0, Medium: 0, Hard: 0 };
   questions.forEach((q) => diffCounts[q.difficulty]++);
 
-  // Close on backdrop click
-  const handleBackdrop = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  // Close on Escape
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
@@ -2027,30 +279,23 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const topicColor =
-    pct === 100
-      ? "#4caf7d"
-      : pct >= 60
-        ? "var(--blue)"
-        : pct >= 30
-          ? "var(--orange)"
-          : "var(--red)";
-
   return (
     <div
-      onClick={handleBackdrop}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.65)",
         backdropFilter: "blur(5px)",
-        zIndex: 99999, // Guaranteed to be on top
+        zIndex: 99999,
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: "0",
+        padding: 0,
         animation: "fadeIn .15s ease",
-        boxSizing: "border-box", // Ensure it contains width bounds securely
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -2059,14 +304,14 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
           border: "1px solid var(--border)",
           borderRadius: "0 0 20px 20px",
           width: "100%",
-          maxWidth: "600px", // Safely constrains it on desktop, scales normally on mobile
+          maxWidth: 600,
           maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
           animation: "slideDown .22s cubic-bezier(.16,1,.3,1)",
           boxSizing: "border-box",
-          overflow: "hidden", // Prevents inner items forcing lateral overflow
+          overflow: "hidden",
         }}
       >
         {/* Header */}
@@ -2092,7 +337,6 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                   fontSize: 17,
                   fontWeight: 800,
                   color: "var(--txt)",
-                  letterSpacing: "-.02em",
                   wordBreak: "break-word",
                 }}
               >
@@ -2164,7 +408,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
             </span>
           </div>
 
-          {/* Diff summary chips */}
+          {/* Diff chips */}
           <div
             style={{
               display: "flex",
@@ -2205,7 +449,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
               placeholder="Search questions…"
               style={{
                 flex: "1 1 120px",
-                minWidth: 0, // Critical for preventing flex blowout
+                minWidth: 0,
                 background: "var(--bg3)",
                 border: "1px solid var(--border)",
                 borderRadius: 9,
@@ -2274,6 +518,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                 return (
                   <div
                     key={q.id}
+                    onClick={() => onToggle(q.id)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -2287,9 +532,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                       userSelect: "none",
                       boxSizing: "border-box",
                     }}
-                    onClick={() => onToggle(q.id)}
                   >
-                    {/* Checkbox */}
                     <div
                       style={{
                         width: 22,
@@ -2304,22 +547,8 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                         transition: "all .15s",
                       }}
                     >
-                      {done && (
-                        <svg
-                          width="11"
-                          height="11"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
+                      {done && <Check />}
                     </div>
-
-                    {/* Index */}
                     <span
                       style={{
                         fontSize: 11,
@@ -2332,8 +561,6 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                     >
                       {i + 1}.
                     </span>
-
-                    {/* Title */}
                     <span
                       style={{
                         flex: 1,
@@ -2341,15 +568,12 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                         fontWeight: done ? 600 : 400,
                         color: done ? "#4caf7d" : "var(--txt)",
                         lineHeight: 1.3,
-                        textDecoration: done ? "none" : "none",
-                        minWidth: 0, // Critical for preventing horizontal blowout
+                        minWidth: 0,
                         wordBreak: "break-word",
                       }}
                     >
                       {q.title}
                     </span>
-
-                    {/* Difficulty badge */}
                     <span
                       style={{
                         fontSize: 10,
@@ -2363,8 +587,6 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                     >
                       {q.difficulty}
                     </span>
-
-                    {/* LC link */}
                     <a
                       href={q.leetcode}
                       target="_blank"
@@ -2379,9 +601,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
                         borderRadius: 6,
                         border: "1px solid var(--border)",
                         background: "var(--bg3)",
-                        transition: "all .12s",
                       }}
-                      title="Open on LeetCode/GFG"
                     >
                       ↗
                     </a>
@@ -2392,7 +612,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
           )}
         </div>
 
-        {/* Footer action */}
+        {/* Footer */}
         <div
           style={{
             padding: "12px 20px",
@@ -2408,9 +628,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
         >
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button
-              onClick={() => {
-                questions.forEach((q) => onToggle(q.id, true));
-              }}
+              onClick={() => questions.forEach((q) => onToggle(q.id, true))}
               style={{
                 fontSize: 12,
                 padding: "7px 14px",
@@ -2424,9 +642,7 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
               Mark All
             </button>
             <button
-              onClick={() => {
-                questions.forEach((q) => onToggle(q.id, false));
-              }}
+              onClick={() => questions.forEach((q) => onToggle(q.id, false))}
               style={{
                 fontSize: 12,
                 padding: "7px 14px",
@@ -2524,7 +740,7 @@ function LeetCodeCard({ username, data, loading, error, onRefresh }) {
       </div>
     );
   if (!data) return null;
-  const diffBars =[
+  const bars = [
     { label: "Easy", val: data.easySolved, color: "#4caf7d" },
     { label: "Medium", val: data.mediumSolved, color: "#ffa116" },
     { label: "Hard", val: data.hardSolved, color: "#ef4444" },
@@ -2533,7 +749,7 @@ function LeetCodeCard({ username, data, loading, error, onRefresh }) {
     <div
       style={{
         padding: "14px 16px",
-        background: "linear-gradient(135deg, #ffa11608 0%, #ffa11602 100%)",
+        background: "linear-gradient(135deg,#ffa11608 0%,#ffa11602 100%)",
         borderRadius: 14,
         border: "1px solid #ffa11633",
       }}
@@ -2549,7 +765,6 @@ function LeetCodeCard({ username, data, loading, error, onRefresh }) {
         <span style={{ fontSize: 13, fontWeight: 700, color: "#ffa116" }}>
           LeetCode
         </span>
-
         <button
           onClick={onRefresh}
           style={{
@@ -2558,7 +773,6 @@ function LeetCodeCard({ username, data, loading, error, onRefresh }) {
             color: "var(--txt3)",
             cursor: "pointer",
             fontSize: 14,
-            padding: "0 2px",
           }}
         >
           ↺
@@ -2589,7 +803,7 @@ function LeetCodeCard({ username, data, loading, error, onRefresh }) {
         <div
           style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}
         >
-          {diffBars.map((d) => (
+          {bars.map((d) => (
             <div
               key={d.label}
               style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -2639,52 +853,56 @@ function LeetCodeCard({ username, data, loading, error, onRefresh }) {
           ))}
         </div>
       </div>
-      <div
-        style={{
-          marginTop: 12,
-          paddingTop: 10,
-          borderTop: "1px solid var(--border)",
-          display: "flex",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        {data.ranking && (
-          <div>
-            <div style={{ fontSize: 10, color: "var(--txt3)" }}>
-              Global Rank
+      {(data.ranking || data.acceptanceRate != null) && (
+        <div
+          style={{
+            marginTop: 12,
+            paddingTop: 10,
+            borderTop: "1px solid var(--border)",
+            display: "flex",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          {data.ranking && (
+            <div>
+              <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+                Global Rank
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--txt)",
+                  fontFamily: "var(--mono)",
+                }}
+              >
+                #{data.ranking.toLocaleString()}
+              </div>
             </div>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--txt)",
-                fontFamily: "var(--mono)",
-              }}
-            >
-              #{data.ranking.toLocaleString()}
+          )}
+          {data.acceptanceRate != null && (
+            <div>
+              <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+                Acceptance
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--txt)",
+                  fontFamily: "var(--mono)",
+                }}
+              >
+                {typeof data.acceptanceRate === "number"
+                  ? data.acceptanceRate.toFixed(1)
+                  : data.acceptanceRate}
+                %
+              </div>
             </div>
-          </div>
-        )}
-        {data.acceptanceRate != null && (
-          <div>
-            <div style={{ fontSize: 10, color: "var(--txt3)" }}>Acceptance</div>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--txt)",
-                fontFamily: "var(--mono)",
-              }}
-            >
-              {typeof data.acceptanceRate === "number"
-                ? data.acceptanceRate.toFixed(1)
-                : data.acceptanceRate}
-              %
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -2714,7 +932,7 @@ function CodeforcesCard({ username, data, loading, error, onRefresh }) {
           }}
         />
         <span style={{ fontSize: 12, color: "var(--txt3)" }}>
-          Fetching Codeforces stats for <b>{username}</b>…
+          Fetching CF stats for <b>{username}</b>…
         </span>
       </div>
     );
@@ -2755,7 +973,7 @@ function CodeforcesCard({ username, data, loading, error, onRefresh }) {
     <div
       style={{
         padding: "14px 16px",
-        background: "linear-gradient(135deg, #5b8def08 0%, #5b8def02 100%)",
+        background: "linear-gradient(135deg,#5b8def08 0%,#5b8def02 100%)",
         borderRadius: 14,
         border: "1px solid #5b8def33",
       }}
@@ -2771,7 +989,6 @@ function CodeforcesCard({ username, data, loading, error, onRefresh }) {
         <span style={{ fontSize: 13, fontWeight: 700, color: "#5b8def" }}>
           Codeforces
         </span>
-
         <button
           onClick={onRefresh}
           style={{
@@ -2780,7 +997,6 @@ function CodeforcesCard({ username, data, loading, error, onRefresh }) {
             color: "var(--txt3)",
             cursor: "pointer",
             fontSize: 14,
-            padding: "0 2px",
           }}
         >
           ↺
@@ -2806,8 +1022,11 @@ function CodeforcesCard({ username, data, loading, error, onRefresh }) {
         <div
           style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}
         >
-          {[["Rank", data.rank, rankColor, true],["Max Rating", data.maxRating || "—", "var(--txt)", false],
-            ["Contests", data.contestCount, "var(--txt)", false],[
+          {[
+            ["Rank", data.rank, rankColor, true],
+            ["Max Rating", data.maxRating || "—", "var(--txt)", false],
+            ["Contests", data.contestCount, "var(--txt)", false],
+            [
               "Contribution",
               (data.contribution >= 0 ? "+" : "") + data.contribution,
               data.contribution >= 0 ? "#4caf7d" : "var(--red)",
@@ -2841,37 +1060,7 @@ function CodeforcesCard({ username, data, loading, error, onRefresh }) {
   );
 }
 
-function CodeChefCard({ username }) {
-  if (!username) return null;
-  return (
-    <div
-      style={{
-        padding: "12px 14px",
-        background: "#e8924a08",
-        borderRadius: 12,
-        border: "1px solid #e8924a33",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 6,
-        }}
-      >
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#e8924a" }}>
-          CodeChef
-        </span>
-      </div>
-      <div style={{ fontSize: 11, color: "var(--txt3)", lineHeight: 1.5 }}>
-        No public API available for CodeChef. Stats must be checked manually.
-      </div>
-    </div>
-  );
-}
-
-// ── DSA Tracker Tab ───────────────────────────────────────────────────────────
+// ── DSA Tab ───────────────────────────────────────────────────────────────────
 function DSATab() {
   const [solved, setSolved] = useState(() => load("pp_dsa_solved", {}));
   const [questionDone, setQuestionDone] = useState(() =>
@@ -2888,38 +1077,16 @@ function DSATab() {
       else next[qid] = true;
       save("pp_dsa_qdone", next);
       if (openTopic) {
-        const questions = DSA_QUESTIONS[openTopic.id] || [];
-        const doneCount = questions.filter((q) => next[q.id]).length;
+        const qs = DSA_QUESTIONS[openTopic.id] || [];
         setSolved((sp) => {
-          const ns = { ...sp, [openTopic.id]: doneCount };
+          const ns = {
+            ...sp,
+            [openTopic.id]: qs.filter((q) => next[q.id]).length,
+          };
           save("pp_dsa_solved", ns);
           return ns;
         });
       }
-      return next;
-    });
-  }
-
-  // Manual +/- still works but syncs from question bank if available
-  function toggle(topicId, delta) {
-    setSolved((prev) => {
-      const cur = prev[topicId] || 0;
-      const topic = DSA_TOPICS.find((t) => t.id === topicId);
-      const next = {
-        ...prev,
-        [topicId]: Math.max(0, Math.min(topic.total, cur + delta)),
-      };
-      save("pp_dsa_solved", next);
-      return next;
-    });
-  }
-
-  function setCount(topicId, val) {
-    const topic = DSA_TOPICS.find((t) => t.id === topicId);
-    const n = Math.max(0, Math.min(topic.total, parseInt(val) || 0));
-    setSolved((prev) => {
-      const next = { ...prev, [topicId]: n };
-      save("pp_dsa_solved", next);
       return next;
     });
   }
@@ -2938,7 +1105,7 @@ function DSATab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Overview */}
+      {/* Overview card */}
       <div
         style={{
           background: "var(--bg2)",
@@ -3012,7 +1179,7 @@ function DSATab() {
         </div>
       </div>
 
-      {/* Topic Grid */}
+      {/* Topic rows */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
           style={{
@@ -3050,18 +1217,9 @@ function DSATab() {
           const questions = DSA_QUESTIONS[topic.id] || [];
           const qDone = questions.filter((q) => questionDone[q.id]).length;
           const hasBank = questions.length > 0;
-
           return (
             <div
               key={topic.id}
-              style={{
-                background: "var(--bg2)",
-                border: "1px solid var(--border)",
-                borderRadius: 13,
-                padding: "12px 14px",
-                cursor: hasBank ? "pointer" : "default",
-                transition: "border-color .15s",
-              }}
               onClick={hasBank ? () => setOpenTopic(topic) : undefined}
               onMouseEnter={(e) => {
                 if (hasBank)
@@ -3070,6 +1228,14 @@ function DSATab() {
               onMouseLeave={(e) => {
                 if (hasBank)
                   e.currentTarget.style.borderColor = "var(--border)";
+              }}
+              style={{
+                background: "var(--bg2)",
+                border: "1px solid var(--border)",
+                borderRadius: 13,
+                padding: "12px 14px",
+                cursor: hasBank ? "pointer" : "default",
+                transition: "border-color .15s",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -3140,72 +1306,6 @@ function DSATab() {
                   </div>
                 </div>
 
-                {/* +/- controls — stop propagation so clicks don't open modal */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    flexShrink: 0,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => toggle(topic.id, -1)}
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 7,
-                      border: "1px solid var(--border)",
-                      background: "var(--bg3)",
-                      color: "var(--txt2)",
-                      cursor: "pointer",
-                      fontSize: 14,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    min={0}
-                    max={topic.total}
-                    value={s}
-                    onChange={(e) => setCount(topic.id, e.target.value)}
-                    style={{
-                      width: 40,
-                      textAlign: "center",
-                      background: "var(--bg3)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 7,
-                      padding: "4px",
-                      fontSize: 12,
-                      color: "var(--txt)",
-                      fontFamily: "var(--mono)",
-                      outline: "none",
-                    }}
-                  />
-                  <button
-                    onClick={() => toggle(topic.id, 1)}
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 7,
-                      border: "1px solid var(--border)",
-                      background: "var(--bg3)",
-                      color: "var(--txt2)",
-                      cursor: "pointer",
-                      fontSize: 14,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
                 {pct === 100 ? (
                   <span style={{ fontSize: 14 }}>✅</span>
                 ) : (
@@ -3221,7 +1321,6 @@ function DSATab() {
         })}
       </div>
 
-      {/* Question Modal */}
       {openTopic && (
         <QuestionModal
           topic={openTopic}
@@ -3254,6 +1353,7 @@ function CoreCSTab() {
         title="Core CS Subjects"
         subtitle="Mark topics as revised — essential for tech interviews"
       />
+      {/* Summary rings */}
       <div
         style={{
           display: "grid",
@@ -3276,6 +1376,7 @@ function CoreCSTab() {
           return (
             <div
               key={subj.id}
+              onClick={() => setExpanded(expanded === subj.id ? null : subj.id)}
               style={{
                 background: "var(--bg2)",
                 border: "1px solid var(--border)",
@@ -3284,7 +1385,6 @@ function CoreCSTab() {
                 textAlign: "center",
                 cursor: "pointer",
               }}
-              onClick={() => setExpanded(expanded === subj.id ? null : subj.id)}
             >
               <ProgressRing pct={pct} size={44} color={color} />
               <div
@@ -3302,6 +1402,7 @@ function CoreCSTab() {
           );
         })}
       </div>
+      {/* Accordions */}
       {CORE_SUBJECTS.map((subj) => {
         const done = subj.topics.filter(
           (t) => progress[`${subj.id}_${t}`],
@@ -3322,6 +1423,7 @@ function CoreCSTab() {
             }}
           >
             <div
+              onClick={() => setExpanded(isOpen ? null : subj.id)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -3329,7 +1431,6 @@ function CoreCSTab() {
                 padding: "14px 16px",
                 cursor: "pointer",
               }}
-              onClick={() => setExpanded(isOpen ? null : subj.id)}
             >
               <RadialProgress pct={pct} size={36} stroke={4} color={color} />
               <div style={{ flex: 1 }}>
@@ -3402,19 +1503,7 @@ function CoreCSTab() {
                           transition: "all .15s",
                         }}
                       >
-                        {isDone && (
-                          <svg
-                            width="11"
-                            height="11"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                          >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        )}
+                        {isDone && <Check />}
                       </div>
                       <span
                         style={{
@@ -3441,6 +1530,7 @@ function CoreCSTab() {
 function SkillsTab() {
   const [skills, setSkills] = useState(() => load("pp_skills", {}));
   const [customSkill, setCustomSkill] = useState("");
+  const allBuiltinSkills = SKILL_CATEGORIES.flatMap((c) => c.items);
 
   function setLevel(skill, level) {
     setSkills((prev) => {
@@ -3456,16 +1546,7 @@ function SkillsTab() {
     setCustomSkill("");
   }
 
-  const LEVELS =[
-    { val: 0, label: "–", color: "var(--txt3)" },
-    { val: 1, label: "Beginner", color: "var(--red)" },
-    { val: 2, label: "Intermediate", color: "var(--orange)" },
-    { val: 3, label: "Proficient", color: "var(--yellow)" },
-    { val: 4, label: "Advanced", color: "#4caf7d" },
-  ];
-
   const proficientCount = Object.values(skills).filter((v) => v >= 3).length;
-  const totalTracked = Object.keys(skills).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -3473,11 +1554,12 @@ function SkillsTab() {
         title="Tech Skills"
         subtitle="Rate your proficiency — helps identify gaps before applying"
       />
+      {/* Stats */}
       <div
         style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}
       >
         {[
-          { val: totalTracked, label: "Tracked" },
+          { val: Object.keys(skills).length, label: "Tracked" },
           { val: proficientCount, label: "Proficient+" },
           {
             val: Object.values(skills).filter((v) => v === 4).length,
@@ -3490,7 +1572,7 @@ function SkillsTab() {
               background: "var(--bg2)",
               border: "1px solid var(--border)",
               borderRadius: 12,
-              padding: "12px",
+              padding: 12,
               textAlign: "center",
             }}
           >
@@ -3519,6 +1601,7 @@ function SkillsTab() {
           </div>
         ))}
       </div>
+      {/* Category cards */}
       {SKILL_CATEGORIES.map((cat) => (
         <div
           key={cat.id}
@@ -3551,7 +1634,7 @@ function SkillsTab() {
                     {skill}
                   </span>
                   <div style={{ display: "flex", gap: 4 }}>
-                    {LEVELS.slice(1).map((l) => (
+                    {SKILL_LEVELS.slice(1).map((l) => (
                       <button
                         key={l.val}
                         onClick={() =>
@@ -3587,13 +1670,13 @@ function SkillsTab() {
                   <span
                     style={{
                       fontSize: 10,
-                      color: LEVELS[level]?.color || "var(--txt3)",
+                      color: SKILL_LEVELS[level]?.color || "var(--txt3)",
                       fontWeight: 600,
                       width: 76,
                       textAlign: "right",
                     }}
                   >
-                    {LEVELS[level]?.label || "–"}
+                    {SKILL_LEVELS[level]?.label || "–"}
                   </span>
                 </div>
               );
@@ -3601,6 +1684,7 @@ function SkillsTab() {
           </div>
         </div>
       ))}
+      {/* Custom skills */}
       <div
         style={{
           background: "var(--bg2)",
@@ -3646,9 +1730,9 @@ function SkillsTab() {
             Add
           </button>
         </form>
-        {Object.keys(skills).filter(
-          (s) => !SKILL_CATEGORIES.flatMap((c) => c.items).includes(s),
-        ).length > 0 && (
+        {/* Custom list */}
+        {Object.entries(skills).filter(([s]) => !allBuiltinSkills.includes(s))
+          .length > 0 && (
           <div
             style={{
               marginTop: 10,
@@ -3658,9 +1742,7 @@ function SkillsTab() {
             }}
           >
             {Object.entries(skills)
-              .filter(
-                ([s]) => !SKILL_CATEGORIES.flatMap((c) => c.items).includes(s),
-              )
+              .filter(([s]) => !allBuiltinSkills.includes(s))
               .map(([skill, level]) => (
                 <div
                   key={skill}
@@ -3727,36 +1809,28 @@ function CompaniesTab() {
   const [companies, setCompanies] = useState(() => load("pp_companies", []));
   const [showAdd, setShowAdd] = useState(false);
   const [filterTier, setFilterTier] = useState("all");
-  const [newCo, setNewCo] = useState({
+  const emptyForm = {
     name: "",
     tier: "dream",
     role: "",
     ctc: "",
     status: "Shortlisted",
     notes: "",
-    rounds:[],
+    rounds: [],
     applyDate: "",
-  });
+  };
+  const [newCo, setNewCo] = useState(emptyForm);
 
   function addCompany(e) {
     e.preventDefault();
     if (!newCo.name.trim()) return;
-    const updated =[
+    const updated = [
       { ...newCo, id: Date.now(), name: newCo.name.trim() },
       ...companies,
     ];
     setCompanies(updated);
     save("pp_companies", updated);
-    setNewCo({
-      name: "",
-      tier: "dream",
-      role: "",
-      ctc: "",
-      status: "Shortlisted",
-      notes: "",
-      rounds:[],
-      applyDate: "",
-    });
+    setNewCo(emptyForm);
     setShowAdd(false);
   }
   function updateStatus(id, status) {
@@ -3771,7 +1845,7 @@ function CompaniesTab() {
             ...c,
             rounds: c.rounds?.includes(round)
               ? c.rounds.filter((r) => r !== round)
-              :[...(c.rounds || []), round],
+              : [...(c.rounds || []), round],
           }
         : c,
     );
@@ -3834,10 +1908,12 @@ function CompaniesTab() {
           Add
         </button>
       </div>
+
+      {/* Stats */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
+          gridTemplateColumns: "repeat(2,1fr)",
           gap: 8,
         }}
       >
@@ -3894,6 +1970,8 @@ function CompaniesTab() {
           </div>
         ))}
       </div>
+
+      {/* Add form */}
       {showAdd && (
         <form
           onSubmit={addCompany}
@@ -3995,7 +2073,7 @@ function CompaniesTab() {
               type="submit"
               style={{
                 flex: 1,
-                padding: "10px",
+                padding: 10,
                 borderRadius: 9,
                 border: "none",
                 background: "var(--txt)",
@@ -4027,6 +2105,8 @@ function CompaniesTab() {
           </div>
         </form>
       )}
+
+      {/* Tier filter */}
       <div
         style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 2 }}
       >
@@ -4049,6 +2129,8 @@ function CompaniesTab() {
           ) : null;
         })}
       </div>
+
+      {/* List */}
       {filtered.length === 0 ? (
         <div
           style={{
@@ -4254,36 +2336,6 @@ function ResumeTab() {
   const [showAdd, setShowAdd] = useState(false);
   const [newV, setNewV] = useState({ label: "", link: "", notes: "" });
 
-  const RESUME_CHECKLIST =[
-    {
-      id: "contact",
-      label: "Contact info complete (email, phone, LinkedIn, GitHub)",
-    },
-    { id: "objective", label: "Summary/objective tailored to target role" },
-    { id: "education", label: "Education section with CGPA (if ≥ 7.5)" },
-    {
-      id: "projects",
-      label: "3-4 strong projects with tech stack & impact metrics",
-    },
-    { id: "internship", label: "Internship / work experience listed" },
-    { id: "skills", label: "Skills section with relevant tech stack" },
-    {
-      id: "achievements",
-      label: "Achievements: coding contests, hackathons, certifications",
-    },
-    {
-      id: "quantify",
-      label: "Every bullet point quantified with numbers/impact",
-    },
-    { id: "ats", label: "ATS-friendly format (no tables, no graphics)" },
-    { id: "onepage", label: "Fits in 1 page (for < 3 yrs experience)" },
-    { id: "proofread", label: "Proofread — no spelling/grammar errors" },
-    {
-      id: "pdf",
-      label: "Exported as PDF, file named properly (FirstName_Resume.pdf)",
-    },
-  ];
-
   function toggleCheck(id) {
     setChecklist((p) => {
       const n = { ...p, [id]: !p[id] };
@@ -4294,7 +2346,7 @@ function ResumeTab() {
   function addVersion(e) {
     e.preventDefault();
     if (!newV.label.trim()) return;
-    const u =[
+    const u = [
       {
         ...newV,
         id: Date.now(),
@@ -4313,6 +2365,16 @@ function ResumeTab() {
 
   const doneCount = RESUME_CHECKLIST.filter((i) => checklist[i.id]).length;
   const pct = Math.round((doneCount / RESUME_CHECKLIST.length) * 100);
+  const scoreColor =
+    pct === 100 ? "#4caf7d" : pct >= 70 ? "var(--blue)" : "var(--orange)";
+  const scoreLabel =
+    pct === 100
+      ? "Perfect! 🎉"
+      : pct >= 70
+        ? "Good"
+        : pct >= 40
+          ? "Needs Work"
+          : "Incomplete";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -4320,6 +2382,8 @@ function ResumeTab() {
         title="Resume Builder"
         subtitle="Checklist + version tracker for your resume"
       />
+
+      {/* Score ring */}
       <div
         style={{
           background: "var(--bg2)",
@@ -4331,17 +2395,7 @@ function ResumeTab() {
           gap: 18,
         }}
       >
-        <ProgressRing
-          pct={pct}
-          size={72}
-          color={
-            pct === 100
-              ? "#4caf7d"
-              : pct >= 70
-                ? "var(--blue)"
-                : "var(--orange)"
-          }
-        />
+        <ProgressRing pct={pct} size={72} color={scoreColor} />
         <div style={{ flex: 1 }}>
           <div
             style={{
@@ -4352,24 +2406,7 @@ function ResumeTab() {
             }}
           >
             Resume Score:{" "}
-            <span
-              style={{
-                color:
-                  pct === 100
-                    ? "#4caf7d"
-                    : pct >= 70
-                      ? "var(--blue)"
-                      : "var(--orange)",
-              }}
-            >
-              {pct === 100
-                ? "Perfect! 🎉"
-                : pct >= 70
-                  ? "Good"
-                  : pct >= 40
-                    ? "Needs Work"
-                    : "Incomplete"}
-            </span>
+            <span style={{ color: scoreColor }}>{scoreLabel}</span>
           </div>
           <div style={{ fontSize: 12, color: "var(--txt3)" }}>
             {doneCount}/{RESUME_CHECKLIST.length} items checked
@@ -4395,6 +2432,8 @@ function ResumeTab() {
           </div>
         </div>
       </div>
+
+      {/* Checklist */}
       <div
         style={{
           background: "var(--bg2)",
@@ -4440,19 +2479,7 @@ function ResumeTab() {
                     transition: "all .15s",
                   }}
                 >
-                  {done && (
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
+                  {done && <Check />}
                 </div>
                 <span
                   style={{
@@ -4470,6 +2497,8 @@ function ResumeTab() {
           })}
         </div>
       </div>
+
+      {/* Tips */}
       <div
         style={{
           background: "var(--blue)10",
@@ -4506,6 +2535,8 @@ function ResumeTab() {
           ))}
         </div>
       </div>
+
+      {/* Versions */}
       <div
         style={{
           background: "var(--bg2)",
@@ -4593,7 +2624,7 @@ function ResumeTab() {
                 type="submit"
                 style={{
                   flex: 1,
-                  padding: "8px",
+                  padding: 8,
                   borderRadius: 8,
                   border: "none",
                   background: "var(--txt)",
@@ -4738,32 +2769,34 @@ function ResumeTab() {
   );
 }
 
-// ── Main View ─────────────────────────────────────────────────────────────────
+// ── Root View ─────────────────────────────────────────────────────────────────
 export default function PlacementPrepView() {
-  const[activeTab, setActiveTab] = useState("dsa");
+  const [activeTab, setActiveTab] = useState("dsa");
 
-  const dsaSolved = useMemo(() => load("pp_dsa_solved", {}),[]);
+  const dsaSolved = useMemo(() => load("pp_dsa_solved", {}), []);
   const dsaTotal = DSA_TOPICS.reduce((s, t) => s + t.total, 0);
   const dsaDone = DSA_TOPICS.reduce((s, t) => s + (dsaSolved[t.id] || 0), 0);
   const dsaPct = Math.round((dsaDone / dsaTotal) * 100);
 
-  const coreProgress = useMemo(() => load("pp_core_progress", {}),[]);
+  const coreProgress = useMemo(() => load("pp_core_progress", {}), []);
   const coreTotal = CORE_SUBJECTS.flatMap((s) => s.topics).length;
   const coreDone = Object.values(coreProgress).filter(Boolean).length;
   const corePct = Math.round((coreDone / coreTotal) * 100);
 
-  const skills = useMemo(() => load("pp_skills", {}),[]);
+  const skills = useMemo(() => load("pp_skills", {}), []);
   const skillPct = Math.min(
     100,
     Math.round((Object.values(skills).filter((v) => v >= 3).length / 8) * 100),
   );
 
-  const resumeCheck = useMemo(() => load("pp_resume_check", {}),[]);
+  const resumeCheck = useMemo(() => load("pp_resume_check", {}), []);
   const resumePct = Math.round(
-    (Object.values(resumeCheck).filter(Boolean).length / 12) * 100,
+    (Object.values(resumeCheck).filter(Boolean).length /
+      RESUME_CHECKLIST.length) *
+      100,
   );
 
-  const companies = useMemo(() => load("pp_companies", []),[]);
+  const companies = useMemo(() => load("pp_companies", []), []);
   const overallPct = Math.round(
     dsaPct * 0.35 + corePct * 0.25 + skillPct * 0.2 + resumePct * 0.2,
   );
@@ -4777,7 +2810,7 @@ export default function PlacementPrepView() {
           ? { label: "Getting Warmed Up 🔥", color: "var(--yellow)" }
           : { label: "Just Getting Started ⚡", color: "var(--orange)" };
 
-  const TABS =[
+  const TABS = [
     { id: "dsa", label: "DSA", emoji: "💻" },
     { id: "core", label: "Core CS", emoji: "📚" },
     { id: "skills", label: "Skills", emoji: "⚙️" },
@@ -4791,20 +2824,14 @@ export default function PlacementPrepView() {
       style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}
     >
       <style>{`
-        /* REMOVED 'transform' FROM THE 100% STATE SO FIXED OVERLAYS WORK PROPERLY */
-        @keyframes fadeUp { 
-          0% { opacity: 0; transform: translateY(12px); } 
-          100% { opacity: 1; transform: none; } 
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideDown { 
-          0% { opacity: 0; transform: translateY(-16px); } 
-          100% { opacity: 1; transform: none; } 
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp   { 0% { opacity:0; transform:translateY(12px); } 100% { opacity:1; transform:none; } }
+        @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+        @keyframes slideDown{ 0% { opacity:0; transform:translateY(-16px); } 100% { opacity:1; transform:none; } }
+        @keyframes spin     { to { transform:rotate(360deg); } }
         .pp-fadein { animation: fadeUp .3s ease forwards; }
       `}</style>
 
+      {/* ── Header ── */}
       <div style={{ marginBottom: 16 }}>
         <div
           style={{
@@ -4848,6 +2875,7 @@ export default function PlacementPrepView() {
           </div>
         </div>
 
+        {/* Readiness breakdown */}
         <div
           style={{
             background: "var(--bg2)",
@@ -4883,7 +2911,7 @@ export default function PlacementPrepView() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
+              gridTemplateColumns: "repeat(2,1fr)",
               gap: 8,
             }}
           >
@@ -4937,6 +2965,7 @@ export default function PlacementPrepView() {
           </div>
         </div>
 
+        {/* Company summary bar */}
         {companies.length > 0 && (
           <div
             style={{
@@ -4947,6 +2976,7 @@ export default function PlacementPrepView() {
               border: "1px solid var(--border)",
               borderRadius: 12,
               marginBottom: 14,
+              flexWrap: "wrap",
             }}
           >
             <span style={{ fontSize: 12, color: "var(--txt3)" }}>
@@ -4985,6 +3015,7 @@ export default function PlacementPrepView() {
         )}
       </div>
 
+      {/* ── Tab bar ── */}
       <div
         style={{
           display: "flex",
@@ -5021,6 +3052,7 @@ export default function PlacementPrepView() {
         ))}
       </div>
 
+      {/* ── Tab content ── */}
       <div className="pp-fadein" key={activeTab}>
         {activeTab === "dsa" && <DSATab />}
         {activeTab === "core" && <CoreCSTab />}

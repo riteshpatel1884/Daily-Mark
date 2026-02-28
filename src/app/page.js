@@ -18,11 +18,9 @@ function App() {
       <Sidebar />
       <div className="scroller">
         <NotificationBanner />
-
+        {view === "heatmap" && <HabitView />}
         {view === "exams" && <ExamView />}
         {/* {view === "attendance" && <AttendanceView />} */}
-
-        {view === "heatmap" && <HabitView />}
 
         {/* {view === "progress" && <AIPlannerView />} */}
         {view === "settings" && <SettingsView />}
