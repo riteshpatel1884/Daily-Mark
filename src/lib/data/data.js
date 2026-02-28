@@ -1835,3 +1835,4 @@ export const SKILL_LEVELS = [
   { val: 3, label: "Proficient", color: "var(--yellow)" },
   { val: 4, label: "Advanced", color: "#4caf7d" },
 ];
+
