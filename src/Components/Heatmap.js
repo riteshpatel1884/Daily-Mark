@@ -41,9 +41,9 @@ function offsetDate(n) {
   return d.toISOString().slice(0, 10);
 }
 
+// ✅ CHANGE 1: Only TODAY is editable. Yesterday and older are always locked.
 function isEditable(dateStr) {
-  const diffHours = (Date.now() - new Date(dateStr + "T00:00:00")) / 3600000;
-  return diffHours >= 0 && diffHours < 48;
+  return dateStr === todayStr();
 }
 
 function fmtDate(dateStr) {
@@ -73,10 +73,13 @@ function getConsistencyMessage(rate) {
   return { text: `Nothing logged yet — start today`, tone: "mid" };
 }
 
+// ✅ CHANGE 2: autoMarkMissed now also marks yesterday explicitly (i=1 is yesterday).
+// It marks ALL past days (i >= 1) that have no record as "undone".
 function autoMarkMissed(records, cols, trackingStartDate) {
   const updated = { ...records };
   let changed = false;
   cols.forEach((col) => {
+    // Start from i=1 (yesterday) and go back up to 60 days
     for (let i = 1; i <= 60; i++) {
       const ds = offsetDate(-i);
       if (ds < trackingStartDate) break;
@@ -1104,8 +1107,11 @@ function WeeklySummaryModal({
 
 // ─── MAIN VIEW ────────────────────────────────────────────────────────────────
 const KEY = "gr_heatmap_v3";
-// Compact date col — saves horizontal space for subject columns
-const DATE_COL_W = 72;
+// ─── GRID LAYOUT CONSTANTS ───────────────────────────────────────────────────
+const SUBJ_W = 140; // Subject label column (sticky)
+const STREAK_W = 62; // Streak column (sticky, next to subject)
+const DATE_W = 48; // Each date column width
+const CELL_SQ = 36; // Cell square size
 
 export default function HabitView() {
   const [loaded, setLoaded] = useState(false);
@@ -1121,7 +1127,7 @@ export default function HabitView() {
   const [showAdd, setShowAdd] = useState(false);
   const [showWeekly, setShowWeekly] = useState(false);
   const [noteCell, setNoteCell] = useState(null);
-  const [range, setRange] = useState(30);
+  const [range, setRange] = useState(7);
 
   // ── Load from localStorage ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1139,7 +1145,9 @@ export default function HabitView() {
     setLoaded(true);
   }, []);
 
-  // ── Auto-mark missed ────────────────────────────────────────────────────────
+  // ── Auto-mark missed (runs once per day) ────────────────────────────────────
+  // Marks ALL days before today (back to trackingStartDate) that have no record.
+  // This means yesterday gets marked "undone" as soon as a new day starts.
   useEffect(() => {
     if (!trackingStartDate) return;
     const today = todayStr();
@@ -1188,6 +1196,8 @@ export default function HabitView() {
     return s;
   }
 
+  // ✅ CHANGE 3: toggle only works for today (isEditable already enforces this,
+  // but we also guard here so locked past cells truly cannot be changed).
   function toggle(dateStr, colId) {
     if (!isEditable(dateStr)) return;
     setRecords((prev) => {
@@ -1243,8 +1253,9 @@ export default function HabitView() {
     patchPersist({ lastWeeklySummary: todayStr() });
   }
 
+  // Newest date first (today at index 0) so the visible left side always shows recent days
   const dates = useMemo(
-    () => Array.from({ length: range }, (_, i) => offsetDate(-(range - 1 - i))),
+    () => Array.from({ length: range }, (_, i) => offsetDate(-i)),
     [range],
   );
   const today = todayStr();
@@ -1262,8 +1273,10 @@ export default function HabitView() {
     const rate =
       relevant.length > 0 ? Math.round((done / relevant.length) * 100) : 0;
     let streak = 0;
-    for (let i = 0; i < relevant.length; i++) {
-      const ds = relevant[relevant.length - 1 - i];
+    // dates are newest-first, so index 0 is today — iterating forward goes back in time
+    const sortedDesc = [...relevant].sort((a, b) => b.localeCompare(a));
+    for (let i = 0; i < sortedDesc.length; i++) {
+      const ds = sortedDesc[i];
       if (records[`${ds}:${colId}`] === "done") streak++;
       else break;
     }
@@ -1320,19 +1333,12 @@ export default function HabitView() {
     (p) => p.done === doneColor && p.undone === undoneColor,
   );
 
-  // Cell square size — slightly smaller so subject cols fill table width nicely
-  const cellSq = range === 7 ? 38 : range === 14 ? 34 : 30;
+  // Cell size is now the CELL_SQ constant defined at module level
 
   if (!loaded) return null;
   if (!trackingStartDate) return <OnboardingModal onConfirm={confirmStart} />;
 
   return (
-    /*
-     * WIDTH NOTE:
-     * The .page wrapper here intentionally has no max-width so it fills whatever
-     * space the sidebar layout gives it.  Padding is kept tight (16px each side)
-     * so the grid touches the edges cleanly.
-     */
     <div
       className="page"
       style={{
@@ -1549,9 +1555,14 @@ export default function HabitView() {
         </div>
       )}
 
+      {/* ✅ Updated hint text — reflects new "only today" rule */}
       <p style={{ fontSize: 13, color: "var(--txt3)", marginBottom: 16 }}>
         Tap <span style={{ fontWeight: 600, color: doneColor }}>✓ done</span> ·
-        tap again to clear · absence auto-marks missed ·{" "}
+        tap again to clear ·{" "}
+        <span style={{ fontWeight: 600, color: undoneColor }}>
+          only today is editable
+        </span>{" "}
+        — past days lock at midnight ·{" "}
         <span style={{ fontWeight: 600, color: "var(--txt)" }}>
           📝 tap dot on done cells for notes
         </span>
@@ -1632,11 +1643,9 @@ export default function HabitView() {
       </div>
 
       {/* ══ GRID ══
-          Key layout choices:
-          - tableLayout: "fixed" so the browser honours <col> widths
-          - Date col: compact fixed width (DATE_COL_W)
-          - Subject cols: auto — browser divides remaining width equally
-            so more columns = narrower but none are truncated; text wraps
+          Layout: col1=Subject(sticky) | col2=Streak | col3=Today | col4=Yesterday | col5+... (scroll)
+          - Table fills available width; date cols are fixed size; overflow scrolls right
+          - Mobile friendly: subject+streak sticky, date cols uniform size
       */}
       <div
         style={{
@@ -1645,28 +1654,34 @@ export default function HabitView() {
           border: "1px solid var(--border)",
           background: "var(--bg2)",
           width: "100%",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         <table
           style={{
             borderCollapse: "collapse",
-            width: "100%",
             tableLayout: "fixed",
-            minWidth: DATE_COL_W + cols.length * (cellSq + 10),
+            // Total width = subject col + streak col + all date cols
+            // The container is 100% wide; extra date cols overflow and scroll
+            width: SUBJ_W + STREAK_W + dates.length * DATE_W,
+            minWidth: SUBJ_W + STREAK_W + dates.length * DATE_W,
           }}
         >
           <colgroup>
-            <col style={{ width: DATE_COL_W, minWidth: DATE_COL_W }} />
-            {cols.map((col) => (
-              <col key={col.id} />
+            <col style={{ width: SUBJ_W }} />
+            <col style={{ width: STREAK_W }} />
+            {dates.map((d) => (
+              <col key={d} style={{ width: DATE_W }} />
             ))}
           </colgroup>
 
+          {/* ── Header row: Subject | Streak | Today | Yesterday | ... ── */}
           <thead>
             <tr>
+              {/* Subject header — sticky */}
               <th
                 style={{
-                  padding: "10px 6px 10px 12px",
+                  padding: "10px 8px 10px 14px",
                   textAlign: "left",
                   fontSize: 10,
                   fontWeight: 700,
@@ -1678,27 +1693,52 @@ export default function HabitView() {
                   borderRight: "1px solid var(--border)",
                   position: "sticky",
                   left: 0,
-                  zIndex: 2,
+                  zIndex: 3,
                 }}
               >
-                Date
+                Subject
               </th>
-              {cols.map((col) => {
-                const st = colStats(col.id),
-                  ls = lastStudied(col.id),
-                  rv = recoveryInfo(col.id);
-                const best = longestStreaks[col.id] || 0,
-                  penalty = consecutiveMissed(col.id) >= 3;
+              {/* Streak header — sticky next to subject */}
+              <th
+                style={{
+                  padding: "10px 6px",
+                  textAlign: "center",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: ".05em",
+                  textTransform: "uppercase",
+                  color: "var(--txt3)",
+                  background: "var(--bg3)",
+                  borderBottom: "1px solid var(--border)",
+                  borderRight: "1px solid var(--border)",
+                  position: "sticky",
+                  left: SUBJ_W,
+                  zIndex: 3,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                🔥 Streak
+              </th>
+              {/* Date columns — newest first */}
+              {dates.map((dateStr) => {
+                const d = new Date(dateStr + "T00:00:00");
+                const isToday = dateStr === today;
+                const isYesterday = dateStr === offsetDate(-1);
+                const isFuture = dateStr > today;
+                const beforeStart =
+                  trackingStartDate && dateStr < trackingStartDate;
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                const dayName = DAYS_SHORT[d.getDay()];
                 return (
                   <th
-                    key={col.id}
+                    key={dateStr}
                     style={{
-                      padding: "8px 4px 6px",
+                      padding: "6px 2px 5px",
                       textAlign: "center",
-                      background: "var(--bg3)",
+                      background: isToday ? `${doneColor}14` : "var(--bg3)",
                       borderBottom: "1px solid var(--border)",
                       borderRight: "1px solid var(--border)",
-                      overflow: "hidden",
+                      opacity: beforeStart ? 0.4 : 1,
                     }}
                   >
                     <div
@@ -1706,25 +1746,126 @@ export default function HabitView() {
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        gap: 2,
+                        gap: 1,
                       }}
                     >
-                      {/* Subject name — wraps, no truncation */}
-                      <div
+                      <span
                         style={{
-                          fontSize: 11,
+                          fontFamily: "var(--mono)",
+                          fontSize: 10,
+                          fontWeight: isToday ? 700 : 400,
+                          color: isToday ? "var(--txt)" : "var(--txt2)",
+                          lineHeight: 1.3,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {fmtDate(dateStr)}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: isToday ? 700 : 500,
+                          color: beforeStart
+                            ? "var(--txt3)"
+                            : isToday
+                              ? doneColor
+                              : isYesterday
+                                ? undoneColor
+                                : isWeekend
+                                  ? "var(--txt2)"
+                                  : "var(--txt3)",
+                          lineHeight: 1.2,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {beforeStart
+                          ? "–"
+                          : isToday
+                            ? "Today ✏️"
+                            : isYesterday
+                              ? "🔒"
+                              : dayName}
+                      </span>
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+
+          {/* ── One row per subject ── */}
+          <tbody>
+            {cols.map((col, colIdx) => {
+              const st = colStats(col.id);
+              const ls = lastStudied(col.id);
+              const rv = recoveryInfo(col.id);
+              const best = longestStreaks[col.id] || 0;
+              const penalty = consecutiveMissed(col.id) >= 3;
+              const rowBg =
+                colIdx % 2 === 0 ? "var(--bg2)" : "var(--bg25, var(--bg3))";
+
+              return (
+                <tr key={col.id}>
+                  {/* Subject label cell — sticky col 1 */}
+                  <td
+                    style={{
+                      padding: "7px 6px 7px 14px",
+                      borderRight: "1px solid var(--border)",
+                      borderBottom: "1px solid var(--border)",
+                      position: "sticky",
+                      left: 0,
+                      zIndex: 2,
+                      background:
+                        colIdx % 2 === 0 ? "var(--bg2)" : "var(--bg3)",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 13,
                           fontWeight: 700,
                           color: penalty ? undoneColor : "var(--txt)",
-                          wordBreak: "break-word",
-                          whiteSpace: "normal",
-                          textAlign: "center",
-                          lineHeight: 1.25,
-                          padding: "0 2px",
+                          lineHeight: 1.2,
                         }}
                       >
                         {col.label}
-                      </div>
-                      <div
+                      </span>
+                      <button
+                        onClick={() => removeCol(col.id)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "0 2px",
+                          color: "var(--red)",
+                          fontSize: 13,
+                          opacity: 0.2,
+                          lineHeight: 1,
+                          transition: "opacity .15s",
+                          flexShrink: 0,
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.opacity = 1)
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.opacity = 0.2)
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 5,
+                        alignItems: "center",
+                        marginTop: 2,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
                         style={{
                           fontSize: 9,
                           fontFamily: "var(--mono)",
@@ -1733,205 +1874,115 @@ export default function HabitView() {
                         }}
                       >
                         {st.rate}%
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 8,
-                          color:
-                            ls === "today" || ls === "yesterday"
-                              ? doneColor
-                              : "var(--txt3)",
-                          fontWeight: 600,
-                          lineHeight: 1.1,
-                        }}
-                      >
-                        {ls || (st.total > 0 ? "not yet" : "—")}
-                      </div>
-                      {rv?.mode === "new_record" ? (
-                        <div
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 800,
-                            color: doneColor,
-                            lineHeight: 1,
-                          }}
-                        >
-                          🌟{rv.streak}d!
-                        </div>
-                      ) : rv?.mode === "progress" ? (
-                        <div
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: doneColor,
-                            lineHeight: 1,
-                          }}
-                        >
-                          🔥{rv.current}/{rv.best}d
-                        </div>
-                      ) : rv?.mode === "recovery" ? (
-                        <div
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: "var(--txt3)",
-                            lineHeight: 1,
-                          }}
-                        >
-                          🎯beat {rv.best}d
-                        </div>
-                      ) : st.streak > 0 ? (
-                        <div
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 800,
-                            color: doneColor,
-                            lineHeight: 1,
-                          }}
-                        >
-                          🔥{st.streak}d
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            fontSize: 9,
-                            color: "var(--txt3)",
-                            lineHeight: 1,
-                          }}
-                        >
-                          –
-                        </div>
-                      )}
-                      {best > 0 && (
-                        <div
-                          style={{
-                            fontSize: 8,
-                            color: "var(--txt3)",
-                            lineHeight: 1,
-                          }}
-                        >
-                          best {best}d
-                        </div>
-                      )}
-                      <button
-                        onClick={() => removeCol(col.id)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: "1px 3px",
-                          color: "var(--red)",
-                          fontSize: 11,
-                          opacity: 0.3,
-                          lineHeight: 1,
-                          transition: "opacity .15s",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.opacity = 1)
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.opacity = 0.3)
-                        }
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-
-          <tbody>
-            {dates.map((dateStr, rowIdx) => {
-              const d = new Date(dateStr + "T00:00:00");
-              const isToday = dateStr === today;
-              const isFuture = dateStr > today;
-              const editable = isEditable(dateStr);
-              const isPast = dateStr < today;
-              const isYesterday = !isToday && editable;
-              const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-              const dayName = DAYS_SHORT[d.getDay()];
-              const beforeStart =
-                trackingStartDate && dateStr < trackingStartDate;
-              const rowBg = isToday
-                ? `${doneColor}10`
-                : isYesterday
-                  ? `${doneColor}06`
-                  : rowIdx % 2 === 0
-                    ? "var(--bg2)"
-                    : "var(--bg3)";
-
-              return (
-                <tr
-                  key={dateStr}
-                  style={{
-                    background: beforeStart ? "var(--bg)" : rowBg,
-                    opacity: beforeStart ? 0.38 : 1,
-                  }}
-                >
-                  {/* ── Date cell: two-line compact ── */}
-                  <td
-                    style={{
-                      padding: "3px 4px 3px 10px",
-                      borderRight: "1px solid var(--border)",
-                      borderBottom: "1px solid var(--border)",
-                      position: "sticky",
-                      left: 0,
-                      zIndex: 1,
-                      background: beforeStart ? "var(--bg)" : rowBg,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: "var(--mono)",
-                          fontSize: 11,
-                          fontWeight: isToday ? 700 : 400,
-                          color: isToday ? "var(--txt)" : "var(--txt2)",
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {fmtDate(dateStr)}
                       </span>
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: isToday ? 700 : isYesterday ? 600 : 400,
-                          color: beforeStart
-                            ? "var(--txt3)"
-                            : isToday
-                              ? doneColor
-                              : isYesterday
-                                ? `${doneColor}90`
-                                : isWeekend
-                                  ? "var(--txt2)"
-                                  : "var(--txt3)",
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {beforeStart
-                          ? "before"
-                          : isToday
-                            ? "Today"
-                            : isYesterday
-                              ? "Yest ✏️"
-                              : dayName}
-                      </span>
+                      {ls && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            color:
+                              ls === "today" || ls === "yesterday"
+                                ? doneColor
+                                : "var(--txt3)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {ls}
+                        </span>
+                      )}
                     </div>
                   </td>
 
-                  {cols.map((col) => {
-                    const k = `${dateStr}:${col.id}`,
-                      status = records[k],
-                      locked = !editable || isFuture || beforeStart,
-                      hasNote = !!notes[k];
+                  {/* Streak cell — sticky col 2 */}
+                  <td
+                    style={{
+                      padding: "6px 6px",
+                      textAlign: "center",
+                      borderRight: "1px solid var(--border)",
+                      borderBottom: "1px solid var(--border)",
+                      position: "sticky",
+                      left: SUBJ_W,
+                      zIndex: 2,
+                      background:
+                        colIdx % 2 === 0 ? "var(--bg2)" : "var(--bg3)",
+                    }}
+                  >
+                    {rv?.mode === "new_record" ? (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: doneColor,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        🌟{rv.streak}d!
+                      </div>
+                    ) : rv?.mode === "progress" ? (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: doneColor,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        🔥{rv.current}
+                        <span style={{ color: "var(--txt3)" }}>/{rv.best}</span>
+                      </div>
+                    ) : rv?.mode === "recovery" ? (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "var(--txt3)",
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        🎯{rv.best}d
+                      </div>
+                    ) : st.streak > 0 ? (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: doneColor,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        🔥{st.streak}d
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: "var(--txt3)" }}>
+                        –
+                      </div>
+                    )}
+                    {best > 0 && (
+                      <div
+                        style={{
+                          fontSize: 8,
+                          color: "var(--txt3)",
+                          marginTop: 1,
+                        }}
+                      >
+                        best {best}d
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Date cells — newest first */}
+                  {dates.map((dateStr) => {
+                    const k = `${dateStr}:${col.id}`;
+                    const status = records[k];
+                    const isFuture = dateStr > today;
+                    const isToday = dateStr === today;
+                    const isYesterday = dateStr === offsetDate(-1);
+                    const isPast = dateStr < today;
+                    const beforeStart =
+                      trackingStartDate && dateStr < trackingStartDate;
+                    const editable = isEditable(dateStr);
+                    const locked = !editable || isFuture || beforeStart;
+                    const hasNote = !!notes[k];
+
                     const bg =
                       beforeStart || isFuture
                         ? "transparent"
@@ -1940,24 +1991,30 @@ export default function HabitView() {
                           : status === "undone"
                             ? undoneColor
                             : "var(--bg4)";
+
+                    const cellColBg = isToday
+                      ? `${doneColor}10`
+                      : colIdx % 2 === 0
+                        ? "var(--bg2)"
+                        : "var(--bg3)";
+
                     return (
                       <td
-                        key={col.id}
+                        key={dateStr}
                         style={{
-                          padding: "3px 2px",
+                          padding: "4px 3px",
                           textAlign: "center",
                           borderRight: "1px solid var(--border)",
                           borderBottom: "1px solid var(--border)",
-                          position: "relative",
+                          background: cellColBg,
                         }}
                       >
                         {beforeStart ? (
                           <div
                             style={{
-                              width: cellSq,
-                              height: cellSq,
-                              borderRadius: 5,
-                              background: "transparent",
+                              width: CELL_SQ,
+                              height: CELL_SQ,
+                              borderRadius: 6,
                               border: "1px solid var(--border)",
                               margin: "0 auto",
                               display: "flex",
@@ -1982,39 +2039,44 @@ export default function HabitView() {
                                 isFuture
                                   ? "Future — not yet"
                                   : !editable
-                                    ? "🔒 Locked (>48h old)"
+                                    ? "🔒 Locked — past days cannot be changed"
                                     : status === "done"
                                       ? "Studied ✓ — tap to clear"
                                       : "Tap to mark as studied"
                               }
                               style={{
-                                width: cellSq,
-                                height: cellSq,
-                                borderRadius: 5,
+                                width: CELL_SQ,
+                                height: CELL_SQ,
+                                borderRadius: 6,
                                 background: bg,
                                 border: isToday
                                   ? "2px solid var(--txt)"
                                   : isYesterday
-                                    ? `1.5px dashed ${doneColor}`
+                                    ? `1.5px dashed ${undoneColor}80`
                                     : "1px solid transparent",
                                 cursor: locked ? "not-allowed" : "pointer",
-                                opacity:
-                                  isPast && !isYesterday
+                                opacity: isFuture
+                                  ? 0.15
+                                  : isPast && !isYesterday
                                     ? status
-                                      ? 0.65
-                                      : 0.2
-                                    : 1,
+                                      ? 0.7
+                                      : 0.22
+                                    : isYesterday
+                                      ? status
+                                        ? 0.75
+                                        : 0.35
+                                      : 1,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                transition: "filter .1s, transform .1s",
+                                transition: "filter .12s, transform .12s",
                               }}
                               onMouseEnter={(e) => {
                                 if (!locked) {
                                   e.currentTarget.style.filter =
-                                    "brightness(1.15)";
+                                    "brightness(1.18)";
                                   e.currentTarget.style.transform =
-                                    "scale(1.1)";
+                                    "scale(1.12)";
                                 }
                               }}
                               onMouseLeave={(e) => {
@@ -2024,6 +2086,21 @@ export default function HabitView() {
                             >
                               {status === "done" && (
                                 <svg
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 12 12"
+                                  fill="none"
+                                  stroke="#fff"
+                                  strokeWidth="2.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  style={{ opacity: 0.95 }}
+                                >
+                                  <polyline points="2 6 5 9 10 3" />
+                                </svg>
+                              )}
+                              {status === "undone" && (
+                                <svg
                                   width="9"
                                   height="9"
                                   viewBox="0 0 12 12"
@@ -2031,22 +2108,7 @@ export default function HabitView() {
                                   stroke="#fff"
                                   strokeWidth="2.8"
                                   strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  style={{ opacity: 0.9 }}
-                                >
-                                  <polyline points="2 6 5 9 10 3" />
-                                </svg>
-                              )}
-                              {status === "undone" && (
-                                <svg
-                                  width="8"
-                                  height="8"
-                                  viewBox="0 0 12 12"
-                                  fill="none"
-                                  stroke="#fff"
-                                  strokeWidth="2.8"
-                                  strokeLinecap="round"
-                                  style={{ opacity: 0.9 }}
+                                  style={{ opacity: 0.95 }}
                                 >
                                   <line x1="3" y1="3" x2="9" y2="9" />
                                   <line x1="9" y1="3" x2="3" y2="9" />
@@ -2069,10 +2131,10 @@ export default function HabitView() {
                                 }
                                 style={{
                                   position: "absolute",
-                                  top: -3,
-                                  right: -3,
-                                  width: 10,
-                                  height: 10,
+                                  top: -4,
+                                  right: -4,
+                                  width: 11,
+                                  height: 11,
                                   borderRadius: "50%",
                                   background: hasNote
                                     ? "#f59e0b"
@@ -2084,7 +2146,7 @@ export default function HabitView() {
                                 }}
                                 onMouseEnter={(e) =>
                                   (e.currentTarget.style.transform =
-                                    "scale(1.3)")
+                                    "scale(1.35)")
                                 }
                                 onMouseLeave={(e) =>
                                   (e.currentTarget.style.transform = "scale(1)")
@@ -2100,82 +2162,47 @@ export default function HabitView() {
               );
             })}
           </tbody>
-
-          <tfoot>
-            <tr>
-              <td
-                style={{
-                  padding: "8px 6px 8px 12px",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: ".06em",
-                  textTransform: "uppercase",
-                  color: "var(--txt3)",
-                  background: "var(--bg3)",
-                  borderTop: "1px solid var(--border)",
-                  position: "sticky",
-                  left: 0,
-                  zIndex: 1,
-                }}
-              >
-                🔥 Streak
-              </td>
-              {cols.map((col) => {
-                const st = colStats(col.id),
-                  best = longestStreaks[col.id] || 0;
-                return (
-                  <td
-                    key={col.id}
-                    style={{
-                      padding: "6px 2px",
-                      textAlign: "center",
-                      background: "var(--bg3)",
-                      borderTop: "1px solid var(--border)",
-                      borderRight: "1px solid var(--border)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontFamily: "var(--mono)",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: st.streak > 0 ? doneColor : "var(--txt3)",
-                      }}
-                    >
-                      {st.streak > 0 ? `${st.streak}d` : "–"}
-                    </div>
-                    {best > 0 && (
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: "var(--txt3)",
-                          marginTop: 1,
-                        }}
-                      >
-                        /{best}d
-                      </div>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          </tfoot>
         </table>
       </div>
+
+      {/* Scroll hint */}
+      {range > 1 && (
+        <div
+          style={{
+            marginTop: 5,
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            color: "var(--txt3)",
+            fontSize: 11,
+          }}
+        >
+          <svg width="13" height="10" viewBox="0 0 14 10" fill="none">
+            <path
+              d="M9 1l4 4-4 4M1 5h12"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>Scroll right to see older dates</span>
+        </div>
+      )}
 
       {/* Legend */}
       <div
         style={{
           display: "flex",
-          gap: 14,
-          marginTop: 12,
+          gap: 12,
+          marginTop: 10,
           flexWrap: "wrap",
           alignItems: "center",
         }}
       >
         {[
           { bg: doneColor, icon: "✓", label: "Studied" },
-          { bg: undoneColor, icon: "✗", label: "Missed (auto)" },
+          { bg: undoneColor, icon: "✗", label: "Missed" },
           { bg: "var(--bg4)", icon: "", label: "Not yet" },
           { bg: "#f59e0b", icon: "", label: "Has note", round: true },
         ].map((l) => (
@@ -2214,10 +2241,9 @@ export default function HabitView() {
             color: "var(--txt3)",
           }}
         >
-          Today + yesterday editable
+          Only today is editable 🔒
         </div>
       </div>
-
       {showColor && (
         <ColorSettingsModal
           doneColor={doneColor}

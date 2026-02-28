@@ -7,13 +7,13 @@ const TOTAL_CREDITS = 5;
 const PLAN_CREDIT_COST = 2;
 const CHAT_CREDIT_COST = 1;
 
-function getCreditsUsed() {
-  try {
-    return parseInt(localStorage.getItem("gr_credits_used") || "0");
-  } catch {
-    return 0;
-  }
-}
+// function getCreditsUsed() {
+//   try {
+//     return parseInt(localStorage.getItem("gr_credits_used") || "0");
+//   } catch {
+//     return 0;
+//   }
+// }
 
 // ── SHARED avatar color palette ───────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -103,371 +103,371 @@ function Avatar({ name, size = 64 }) {
   );
 }
 
-// ── AI Credits Section Component ──────────────────────────────────────────────
-function AICreditsSection() {
-  const [creditsUsed, setCreditsUsed] = useState(0);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  useEffect(() => {
-    setCreditsUsed(getCreditsUsed());
-  }, []);
+// function AICreditsSection() {
+//   const [creditsUsed, setCreditsUsed] = useState(0);
+//   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const creditsRemaining = Math.max(0, TOTAL_CREDITS - creditsUsed);
-  const pct = (creditsRemaining / TOTAL_CREDITS) * 100;
-  const barColor =
-    pct > 40 ? "#4caf7d" : pct > 20 ? "var(--orange)" : "var(--red)";
-  const isExhausted = creditsRemaining === 0;
+//   useEffect(() => {
+//     setCreditsUsed(getCreditsUsed());
+//   }, []);
 
-  function handleResetCredits() {
-    localStorage.setItem("gr_credits_used", "0");
-    setCreditsUsed(0);
-    setShowResetConfirm(false);
-  }
+//   const creditsRemaining = Math.max(0, TOTAL_CREDITS - creditsUsed);
+//   const pct = (creditsRemaining / TOTAL_CREDITS) * 100;
+//   const barColor =
+//     pct > 40 ? "#4caf7d" : pct > 20 ? "var(--orange)" : "var(--red)";
+//   const isExhausted = creditsRemaining === 0;
 
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <div className="slabel" style={{ marginBottom: 10 }}>
-        AI Credits
-      </div>
+//   function handleResetCredits() {
+//     localStorage.setItem("gr_credits_used", "0");
+//     setCreditsUsed(0);
+//     setShowResetConfirm(false);
+//   }
 
-      {/* Main credit card */}
-      <div
-        style={{
-          background: isExhausted ? "var(--red)10" : "var(--bg2)",
-          border: `1.5px solid ${isExhausted ? "var(--red)44" : "var(--border)"}`,
-          borderRadius: 16,
-          padding: 18,
-        }}
-      >
-        {/* Header row */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 14,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20,
-                background: isExhausted ? "var(--red)15" : "var(--blue)15",
-              }}
-            >
-              {isExhausted ? "🔒" : "⚡"}
-            </div>
-            <div>
-              <div
-                style={{ fontSize: 14, fontWeight: 700, color: "var(--txt)" }}
-              >
-                Free AI Credits
-              </div>
-              <div style={{ fontSize: 11, color: "var(--txt3)" }}>
-                Shared across Plan & Chat
-              </div>
-            </div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div
-              style={{
-                fontSize: 28,
-                fontWeight: 800,
-                color: isExhausted ? "var(--red)" : barColor,
-                lineHeight: 1,
-                fontFamily: "var(--mono)",
-              }}
-            >
-              {creditsRemaining}
-            </div>
-            <div style={{ fontSize: 10, color: "var(--txt3)" }}>
-              of {TOTAL_CREDITS} left
-            </div>
-          </div>
-        </div>
+//   return (
+//     <div style={{ marginBottom: 24 }}>
+//       <div className="slabel" style={{ marginBottom: 10 }}>
+//         AI Credits
+//       </div>
 
-        {/* Progress bar */}
-        <div
-          style={{
-            height: 8,
-            background: "var(--bg4)",
-            borderRadius: 6,
-            overflow: "hidden",
-            marginBottom: 10,
-          }}
-        >
-          <div
-            style={{
-              height: "100%",
-              width: `${pct}%`,
-              background: barColor,
-              borderRadius: 6,
-              transition: "width .4s ease",
-            }}
-          />
-        </div>
+//       {/* Main credit card */}
+//       <div
+//         style={{
+//           background: isExhausted ? "var(--red)10" : "var(--bg2)",
+//           border: `1.5px solid ${isExhausted ? "var(--red)44" : "var(--border)"}`,
+//           borderRadius: 16,
+//           padding: 18,
+//         }}
+//        >
+//         {/* Header row */}
+//         <div
+//           style={{
+//             display: "flex",
+//             alignItems: "center",
+//             justifyContent: "space-between",
+//             marginBottom: 14,
+//           }}
+//         >
+//           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+//             <div
+//               style={{
+//                 width: 40,
+//                 height: 40,
+//                 borderRadius: 10,
+//                 display: "flex",
+//                 alignItems: "center",
+//                 justifyContent: "center",
+//                 fontSize: 20,
+//                 background: isExhausted ? "var(--red)15" : "var(--blue)15",
+//               }}
+//             >
+//               {isExhausted ? "🔒" : "⚡"}
+//             </div>
+//             <div>
+//               <div
+//                 style={{ fontSize: 14, fontWeight: 700, color: "var(--txt)" }}
+//               >
+//                 Free AI Credits
+//               </div>
+//               <div style={{ fontSize: 11, color: "var(--txt3)" }}>
+//                 Shared across Plan & Chat
+//               </div>
+//             </div>
+//           </div>
+//           <div style={{ textAlign: "right" }}>
+//             <div
+//               style={{
+//                 fontSize: 28,
+//                 fontWeight: 800,
+//                 color: isExhausted ? "var(--red)" : barColor,
+//                 lineHeight: 1,
+//                 fontFamily: "var(--mono)",
+//               }}
+//             >
+//               {creditsRemaining}
+//             </div>
+//             <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+//               of {TOTAL_CREDITS} left
+//             </div>
+//           </div>
+//         </div>
 
-        {/* Pip dots */}
-        <div style={{ display: "flex", gap: 5, marginBottom: 14 }}>
-          {Array.from({ length: TOTAL_CREDITS }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                height: 5,
-                borderRadius: 3,
-                background: i < creditsUsed ? "var(--red)55" : "#4caf7d88",
-                transition: "background .3s",
-              }}
-            />
-          ))}
-        </div>
+//         {/* Progress bar */}
+//         <div
+//           style={{
+//             height: 8,
+//             background: "var(--bg4)",
+//             borderRadius: 6,
+//             overflow: "hidden",
+//             marginBottom: 10,
+//           }}
+//         >
+//           <div
+//             style={{
+//               height: "100%",
+//               width: `${pct}%`,
+//               background: barColor,
+//               borderRadius: 6,
+//               transition: "width .4s ease",
+//             }}
+//           />
+//         </div>
 
-        {/* Cost breakdown */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 8,
-            marginBottom: 14,
-          }}
-        >
-          {[
-            {
-              icon: "🧠",
-              label: "Generate Plan",
-              cost: PLAN_CREDIT_COST,
-              desc: "per generation",
-            },
-            {
-              icon: "💬",
-              label: "Chat Message",
-              cost: CHAT_CREDIT_COST,
-              desc: "per message",
-            },
-          ].map((item) => (
-            <div
-              key={item.label}
-              style={{
-                background: "var(--bg3)",
-                border: "1px solid var(--border)",
-                borderRadius: 10,
-                padding: "10px 12px",
-              }}
-            >
-              <div style={{ fontSize: 16, marginBottom: 4 }}>{item.icon}</div>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "var(--txt)",
-                  marginBottom: 2,
-                }}
-              >
-                {item.label}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--txt3)" }}>
-                {item.desc}
-              </div>
-              <div
-                style={{
-                  marginTop: 6,
-                  fontSize: 13,
-                  fontWeight: 800,
-                  color: "var(--txt)",
-                  fontFamily: "var(--mono)",
-                }}
-              >
-                {item.cost} credit{item.cost !== 1 ? "s" : ""}
-              </div>
-            </div>
-          ))}
-        </div>
+//         {/* Pip dots */}
+//         <div style={{ display: "flex", gap: 5, marginBottom: 14 }}>
+//           {Array.from({ length: TOTAL_CREDITS }).map((_, i) => (
+//             <div
+//               key={i}
+//               style={{
+//                 flex: 1,
+//                 height: 5,
+//                 borderRadius: 3,
+//                 background: i < creditsUsed ? "var(--red)55" : "#4caf7d88",
+//                 transition: "background .3s",
+//               }}
+//             />
+//           ))}
+//         </div>
 
-        {/* Usage stats */}
-        <div
-          style={{
-            background: "var(--bg3)",
-            borderRadius: 10,
-            padding: "10px 12px",
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 14,
-          }}
-        >
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: "var(--txt)",
-                fontFamily: "var(--mono)",
-              }}
-            >
-              {creditsUsed}
-            </div>
-            <div style={{ fontSize: 10, color: "var(--txt3)" }}>Used</div>
-          </div>
-          <div style={{ width: 1, background: "var(--border)" }} />
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: barColor,
-                fontFamily: "var(--mono)",
-              }}
-            >
-              {creditsRemaining}
-            </div>
-            <div style={{ fontSize: 10, color: "var(--txt3)" }}>Remaining</div>
-          </div>
-          <div style={{ width: 1, background: "var(--border)" }} />
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 800,
-                color: "var(--txt)",
-                fontFamily: "var(--mono)",
-              }}
-            >
-              {TOTAL_CREDITS}
-            </div>
-            <div style={{ fontSize: 10, color: "var(--txt3)" }}>Total Free</div>
-          </div>
-        </div>
+//         {/* Cost breakdown */}
+//         <div
+//           style={{
+//             display: "grid",
+//             gridTemplateColumns: "1fr 1fr",
+//             gap: 8,
+//             marginBottom: 14,
+//           }}
+//         >
+//           {[
+//             {
+//               icon: "🧠",
+//               label: "Generate Plan",
+//               cost: PLAN_CREDIT_COST,
+//               desc: "per generation",
+//             },
+//             {
+//               icon: "💬",
+//               label: "Chat Message",
+//               cost: CHAT_CREDIT_COST,
+//               desc: "per message",
+//             },
+//           ].map((item) => (
+//             <div
+//               key={item.label}
+//               style={{
+//                 background: "var(--bg3)",
+//                 border: "1px solid var(--border)",
+//                 borderRadius: 10,
+//                 padding: "10px 12px",
+//               }}
+//             >
+//               <div style={{ fontSize: 16, marginBottom: 4 }}>{item.icon}</div>
+//               <div
+//                 style={{
+//                   fontSize: 12,
+//                   fontWeight: 700,
+//                   color: "var(--txt)",
+//                   marginBottom: 2,
+//                 }}
+//               >
+//                 {item.label}
+//               </div>
+//               <div style={{ fontSize: 11, color: "var(--txt3)" }}>
+//                 {item.desc}
+//               </div>
+//               <div
+//                 style={{
+//                   marginTop: 6,
+//                   fontSize: 13,
+//                   fontWeight: 800,
+//                   color: "var(--txt)",
+//                   fontFamily: "var(--mono)",
+//                 }}
+//               >
+//                 {item.cost} credit{item.cost !== 1 ? "s" : ""}
+//               </div>
+//             </div>
+//           ))}
+//         </div>
 
-        {/* Exhausted message or purchase CTA */}
-        {isExhausted ? (
-          <div
-            style={{
-              background: "var(--red)12",
-              border: "1px solid var(--red)33",
-              borderRadius: 10,
-              padding: "12px 14px",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--red)",
-                marginBottom: 4,
-              }}
-            >
-              🔒 You've used all your free credits
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--txt2)",
-                marginBottom: 10,
-                lineHeight: 1.5,
-              }}
-            >
-              Purchase more credits to continue using AI features.
-            </div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: "var(--bg3)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: "8px 16px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--txt3)",
-              }}
-            >
-              🛒 Purchase Credits — Coming Soon
-            </div>
-          </div>
-        ) : (
-          <div
-            style={{
-              background: "var(--blue)10",
-              border: "1px solid var(--blue)25",
-              borderRadius: 10,
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 18 }}>💡</span>
-            <div
-              style={{ fontSize: 12, color: "var(--txt2)", lineHeight: 1.5 }}
-            >
-              You have{" "}
-              <strong style={{ color: barColor }}>
-                {creditsRemaining} credit{creditsRemaining !== 1 ? "s" : ""}
-              </strong>{" "}
-              remaining.{" "}
-              {creditsRemaining >= PLAN_CREDIT_COST
-                ? `Can generate ${Math.floor(creditsRemaining / PLAN_CREDIT_COST)} plan${Math.floor(creditsRemaining / PLAN_CREDIT_COST) !== 1 ? "s" : ""} or send ${creditsRemaining} chat message${creditsRemaining !== 1 ? "s" : ""}.`
-                : `Only enough for ${creditsRemaining} chat message${creditsRemaining !== 1 ? "s" : ""}.`}
-            </div>
-          </div>
-        )}
-      </div>
+//         {/* Usage stats */}
+//         <div
+//           style={{
+//             background: "var(--bg3)",
+//             borderRadius: 10,
+//             padding: "10px 12px",
+//             display: "flex",
+//             justifyContent: "space-between",
+//             marginBottom: 14,
+//           }}
+//         >
+//           <div style={{ textAlign: "center" }}>
+//             <div
+//               style={{
+//                 fontSize: 16,
+//                 fontWeight: 800,
+//                 color: "var(--txt)",
+//                 fontFamily: "var(--mono)",
+//               }}
+//             >
+//               {creditsUsed}
+//             </div>
+//             <div style={{ fontSize: 10, color: "var(--txt3)" }}>Used</div>
+//           </div>
+//           <div style={{ width: 1, background: "var(--border)" }} />
+//           <div style={{ textAlign: "center" }}>
+//             <div
+//               style={{
+//                 fontSize: 16,
+//                 fontWeight: 800,
+//                 color: barColor,
+//                 fontFamily: "var(--mono)",
+//               }}
+//             >
+//               {creditsRemaining}
+//             </div>
+//             <div style={{ fontSize: 10, color: "var(--txt3)" }}>Remaining</div>
+//           </div>
+//           <div style={{ width: 1, background: "var(--border)" }} />
+//           <div style={{ textAlign: "center" }}>
+//             <div
+//               style={{
+//                 fontSize: 16,
+//                 fontWeight: 800,
+//                 color: "var(--txt)",
+//                 fontFamily: "var(--mono)",
+//               }}
+//             >
+//               {TOTAL_CREDITS}
+//             </div>
+//             <div style={{ fontSize: 10, color: "var(--txt3)" }}>Total Free</div>
+//           </div>
+//         </div>
 
-      {/* Coming soon purchase section */}
-      <div
-        style={{
-          marginTop: 8,
-          background: "var(--bg2)",
-          border: "1px dashed var(--border)",
-          borderRadius: 12,
-          padding: "14px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <div style={{ fontSize: 24 }}>🛒</div>
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "var(--txt)",
-              marginBottom: 2,
-            }}
-          >
-            Buy More Credits
-          </div>
-          <div style={{ fontSize: 12, color: "var(--txt3)" }}>
-            Credit packs coming soon. Stay tuned!
-          </div>
-        </div>
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: ".06em",
-            padding: "4px 10px",
-            borderRadius: 6,
-            background: "var(--bg4)",
-            color: "var(--txt3)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          SOON
-        </div>
-      </div>
-    </div>
-  );
-}
+//         {/* Exhausted message or purchase CTA */}
+//         {isExhausted ? (
+//           <div
+//             style={{
+//               background: "var(--red)12",
+//               border: "1px solid var(--red)33",
+//               borderRadius: 10,
+//               padding: "12px 14px",
+//               textAlign: "center",
+//             }}
+//           >
+//             <div
+//               style={{
+//                 fontSize: 13,
+//                 fontWeight: 700,
+//                 color: "var(--red)",
+//                 marginBottom: 4,
+//               }}
+//             >
+//               🔒 You've used all your free credits
+//             </div>
+//             <div
+//               style={{
+//                 fontSize: 12,
+//                 color: "var(--txt2)",
+//                 marginBottom: 10,
+//                 lineHeight: 1.5,
+//               }}
+//             >
+//               Purchase more credits to continue using AI features.
+//             </div>
+//             <div
+//               style={{
+//                 display: "inline-flex",
+//                 alignItems: "center",
+//                 gap: 6,
+//                 background: "var(--bg3)",
+//                 border: "1px solid var(--border)",
+//                 borderRadius: 8,
+//                 padding: "8px 16px",
+//                 fontSize: 12,
+//                 fontWeight: 600,
+//                 color: "var(--txt3)",
+//               }}
+//             >
+//               🛒 Purchase Credits — Coming Soon
+//             </div>
+//           </div>
+//         ) : (
+//           <div
+//             style={{
+//               background: "var(--blue)10",
+//               border: "1px solid var(--blue)25",
+//               borderRadius: 10,
+//               padding: "10px 14px",
+//               display: "flex",
+//               alignItems: "center",
+//               gap: 10,
+//             }}
+//           >
+//             <span style={{ fontSize: 18 }}>💡</span>
+//             <div
+//               style={{ fontSize: 12, color: "var(--txt2)", lineHeight: 1.5 }}
+//             >
+//               You have{" "}
+//               <strong style={{ color: barColor }}>
+//                 {creditsRemaining} credit{creditsRemaining !== 1 ? "s" : ""}
+//               </strong>{" "}
+//               remaining.{" "}
+//               {creditsRemaining >= PLAN_CREDIT_COST
+//                 ? `Can generate ${Math.floor(creditsRemaining / PLAN_CREDIT_COST)} plan${Math.floor(creditsRemaining / PLAN_CREDIT_COST) !== 1 ? "s" : ""} or send ${creditsRemaining} chat message${creditsRemaining !== 1 ? "s" : ""}.`
+//                 : `Only enough for ${creditsRemaining} chat message${creditsRemaining !== 1 ? "s" : ""}.`}
+//             </div>
+//           </div>
+//         )}
+//       </div>
+
+//       {/* Coming soon purchase section */}
+//       <div
+//         style={{
+//           marginTop: 8,
+//           background: "var(--bg2)",
+//           border: "1px dashed var(--border)",
+//           borderRadius: 12,
+//           padding: "14px 16px",
+//           display: "flex",
+//           alignItems: "center",
+//           gap: 12,
+//         }}
+//        >
+//         <div style={{ fontSize: 24 }}>🛒</div>
+//         <div style={{ flex: 1 }}>
+//           <div
+//             style={{
+//               fontSize: 13,
+//               fontWeight: 700,
+//               color: "var(--txt)",
+//               marginBottom: 2,
+//             }}
+//           >
+//             Buy More Credits
+//           </div>
+//           <div style={{ fontSize: 12, color: "var(--txt3)" }}>
+//             Credit packs coming soon. Stay tuned!
+//           </div>
+//         </div>
+//         <div
+//           style={{
+//             fontSize: 10,
+//             fontWeight: 700,
+//             letterSpacing: ".06em",
+//             padding: "4px 10px",
+//             borderRadius: 6,
+//             background: "var(--bg4)",
+//             color: "var(--txt3)",
+//             border: "1px solid var(--border)",
+//           }}
+//         >
+//           SOON
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 export default function SettingsView() {
   const { theme, setTheme, cgpaGoal, setCgpaGoal, sem, setSem } = useApp();
@@ -981,7 +981,7 @@ export default function SettingsView() {
       </div>
 
       {/* ── AI CREDITS ── */}
-      <AICreditsSection />
+      {/* <AICreditsSection /> */}
 
       {/* ── ACADEMIC ── */}
       <div style={{ marginBottom: 24 }}>
