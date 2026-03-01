@@ -1365,7 +1365,7 @@ export default function HabitView() {
             color: "var(--txt)",
           }}
         >
-          Study Heatmap
+           Heatmap
         </h1>
         <div style={{ display: "flex", gap: 7 }}>
           <button

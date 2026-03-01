@@ -1,6 +1,6 @@
 "use client";
 // ─────────────────────────────────────────────────────────────────────────────
-// PlacementPrepView.jsx  —  Logic + UI only. Data lives in placementData.js
+// PlacementPrepView.jsx  —  Pattern-based DSA tracker
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
@@ -32,7 +32,7 @@ function save(key, val) {
   } catch {}
 }
 
-// ── Question count helpers (raw, no weighting) ────────────────────────────────
+// ── Question count helpers ────────────────────────────────────────────────────
 function getTotalQuestions() {
   return DSA_TOPICS.reduce((s, t) => s + (DSA_QUESTIONS[t.id] || []).length, 0);
 }
@@ -131,7 +131,7 @@ function getWeakTopics(questionDone, topicLastSeen) {
   }).filter((t) => t.alert);
 }
 
-// ── Pace Engine — questions/day (no points) ───────────────────────────────────
+// ── Pace Engine ───────────────────────────────────────────────────────────────
 function calcPace(targetDate, questionDone) {
   if (!targetDate) return null;
   const now = new Date();
@@ -142,22 +142,15 @@ function calcPace(targetDate, questionDone) {
   const doneQ = getSolvedCount(questionDone);
   const remaining = totalQ - doneQ;
   const requiredPerDay = remaining / daysLeft;
-
   const log = load("pp_activity_log", {});
   const today = new Date().toISOString().split("T")[0];
-
-  // Find the first day the user ever logged activity
   const allLoggedDays = Object.keys(log).sort();
   const firstDay = allLoggedDays.length > 0 ? allLoggedDays[0] : today;
-
-  // Count days from first active day to today (inclusive)
   const msPerDay = 86400000;
   const daysSinceStart = Math.max(
     1,
     Math.floor((new Date(today) - new Date(firstDay)) / msPerDay) + 1,
   );
-
-  // Sum all activity across those days
   const totalActivity = Object.values(log).reduce((a, b) => a + b, 0);
   const actualPerDay = totalActivity / daysSinceStart;
   const projectedFinishDays =
@@ -165,7 +158,6 @@ function calcPace(targetDate, questionDone) {
   const projectedDate = new Date(now);
   projectedDate.setDate(projectedDate.getDate() + projectedFinishDays);
   const lateDays = projectedFinishDays - daysLeft;
-
   return {
     daysLeft,
     totalQ,
@@ -193,6 +185,12 @@ function getMilestones(questionDone) {
   });
   return milestones;
 }
+
+// ── Unique pattern tags ───────────────────────────────────────────────────────
+const PATTERN_TAGS = [
+  "All",
+  ...Array.from(new Set(DSA_TOPICS.map((t) => t.tag).filter(Boolean))),
+];
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
 function Check({ size = 11 }) {
@@ -476,7 +474,6 @@ function MomentumCard({ momentum }) {
     };
   });
   const max = Math.max(...bars.map((b) => b.val), 1);
-
   return (
     <div
       style={{
@@ -566,8 +563,8 @@ function WeakTopicsAlert({ weakTopics }) {
   return (
     <div
       style={{
-        background: "var(--red)0d",
-        border: "1px solid var(--red)22",
+        background: "rgba(239,68,68,0.05)",
+        border: "1px solid rgba(239,68,68,0.15)",
         borderRadius: 14,
         padding: "14px 16px",
         marginBottom: 14,
@@ -583,7 +580,7 @@ function WeakTopicsAlert({ weakTopics }) {
           marginBottom: 10,
         }}
       >
-        ⚠ Attention Required
+        ⚠ Patterns Needing Attention
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {weakTopics.slice(0, 4).map((t) => (
@@ -591,6 +588,7 @@ function WeakTopicsAlert({ weakTopics }) {
             key={t.id}
             style={{ display: "flex", alignItems: "center", gap: 10 }}
           >
+            <span style={{ fontSize: 13, marginRight: 2 }}>{t.icon}</span>
             <div style={{ flex: 1, fontSize: 12, color: "var(--txt2)" }}>
               {t.label}
             </div>
@@ -600,7 +598,7 @@ function WeakTopicsAlert({ weakTopics }) {
                   fontSize: 10,
                   color: "#e8924a",
                   fontWeight: 700,
-                  background: "#e8924a15",
+                  background: "rgba(232,146,74,0.1)",
                   padding: "2px 7px",
                   borderRadius: 5,
                 }}
@@ -614,7 +612,7 @@ function WeakTopicsAlert({ weakTopics }) {
                   fontSize: 10,
                   color: "#ef4444",
                   fontWeight: 700,
-                  background: "#ef444415",
+                  background: "rgba(239,68,68,0.08)",
                   padding: "2px 7px",
                   borderRadius: 5,
                 }}
@@ -636,7 +634,6 @@ function MilestoneGrid({ questionDone }) {
   const halfway = milestones.filter((m) => m.status === "halfway");
   const started = milestones.filter((m) => m.status === "started");
   const untouched = DSA_TOPICS.length - milestones.length;
-
   return (
     <div
       style={{
@@ -657,7 +654,7 @@ function MilestoneGrid({ questionDone }) {
           marginBottom: 10,
         }}
       >
-        Progress Milestones
+        Pattern Milestones
       </div>
       <div
         style={{
@@ -740,11 +737,11 @@ function MilestoneGrid({ questionDone }) {
                 fontWeight: 700,
                 padding: "3px 8px",
                 borderRadius: 6,
-                background: "#4caf7d15",
+                background: "rgba(76,175,125,0.1)",
                 color: "#4caf7d",
               }}
             >
-              ✓ {m.label}
+              {m.icon} {m.label}
             </span>
           ))}
         </div>
@@ -831,11 +828,36 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
           >
             <div>
               <div
-                style={{ fontSize: 16, fontWeight: 800, color: "var(--txt)" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 4,
+                }}
               >
-                {topic.label}
+                <span style={{ fontSize: 20 }}>{topic.icon}</span>
+                <div
+                  style={{ fontSize: 16, fontWeight: 800, color: "var(--txt)" }}
+                >
+                  {topic.label}
+                </div>
+                {topic.tag && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 800,
+                      padding: "2px 8px",
+                      borderRadius: 5,
+                      background: "rgba(91,141,239,0.12)",
+                      color: "#5b8def",
+                      letterSpacing: ".06em",
+                    }}
+                  >
+                    {topic.tag}
+                  </span>
+                )}
               </div>
-              <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: "var(--txt3)" }}>
                 {doneCount}/{questions.length} solved
               </div>
             </div>
@@ -1156,6 +1178,7 @@ function DSATab({ onSolve }) {
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateInput, setDateInput] = useState(targetDate);
+  const [activeTag, setActiveTag] = useState("All");
 
   const dsaScore = useMemo(
     () => calcReadinessScore(questionDone),
@@ -1174,27 +1197,49 @@ function DSATab({ onSolve }) {
   const totalSolved = getSolvedCount(questionDone);
   const totalProblems = getTotalQuestions();
 
+  const filteredTopics = useMemo(
+    () =>
+      activeTag === "All"
+        ? DSA_TOPICS
+        : DSA_TOPICS.filter((t) => t.tag === activeTag),
+    [activeTag],
+  );
+
   function applyDate() {
     setTargetDate(dateInput);
     save("pp_target_date", dateInput);
     setShowDatePicker(false);
   }
 
-  function toggleQuestion(qid, forceValue) {
-    setQuestionDone((prev) => {
-      const next = { ...prev };
-      if (forceValue === true) next[qid] = true;
-      else if (forceValue === false) delete next[qid];
-      else if (next[qid]) delete next[qid];
-      else {
-        next[qid] = true;
-        logActivity(1);
-        onSolve && onSolve();
-      }
-      save("pp_dsa_qdone", next);
-      return next;
-    });
-  }
+ function toggleQuestion(qid, forceValue) {
+   setQuestionDone((prev) => {
+     const next = { ...prev };
+     let solved = false;
+
+     if (forceValue === true) {
+       next[qid] = true;
+     } else if (forceValue === false) {
+       delete next[qid];
+     } else if (next[qid]) {
+       delete next[qid];
+     } else {
+       next[qid] = true;
+       solved = true;
+     }
+
+     save("pp_dsa_qdone", next);
+
+     // Fix: Defer the parent update to avoid "Cannot update component while rendering" error
+     if (solved) {
+       setTimeout(() => {
+         logActivity(1);
+         onSolve && onSolve();
+       }, 0);
+     }
+
+     return next;
+   });
+ }
 
   function openTopicModal(topic) {
     setTopicLastSeen((prev) => {
@@ -1213,6 +1258,24 @@ function DSATab({ onSolve }) {
         : dsaScore >= 30
           ? { label: "Needs Work 🔥", color: "#e8924a" }
           : { label: "Just Starting ⚡", color: "#ef4444" };
+
+  // Tag color map
+  const tagColors = {
+    Array: "#5b8def",
+    "Array/String": "#5b8def",
+    LinkedList: "#9b72cf",
+    Stack: "#e8924a",
+    Tree: "#4caf7d",
+    "Tree/Graph": "#4caf7d",
+    Graph: "#ef7b4d",
+    Recursion: "#d4b44a",
+    DP: "#c672cf",
+    Greedy: "#4cb87d",
+    Heap: "#ef4444",
+    "Advanced DS": "#5b9def",
+    Math: "#8b8def",
+    Search: "#7bcfaf",
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1241,7 +1304,8 @@ function DSATab({ onSolve }) {
             <div
               style={{ fontSize: 11, color: "var(--txt3)", marginBottom: 8 }}
             >
-              {totalSolved}/{totalProblems} questions solved
+              {totalSolved}/{totalProblems} questions solved across{" "}
+              {DSA_TOPICS.length} patterns
             </div>
             <div
               style={{
@@ -1262,7 +1326,6 @@ function DSATab({ onSolve }) {
                 }}
               />
             </div>
-            {/* Target date row */}
             {targetDate && !showDatePicker ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 11, color: "var(--txt3)" }}>
@@ -1305,7 +1368,7 @@ function DSATab({ onSolve }) {
                   textAlign: "left",
                 }}
               >
-                + Set your placement deadline (e.g. July 20)
+                + Set your placement deadline
               </button>
             ) : null}
           </div>
@@ -1328,7 +1391,7 @@ function DSATab({ onSolve }) {
                 marginBottom: 8,
               }}
             >
-              I want to finish all DSA by:
+              I want to finish all patterns by:
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input
@@ -1385,32 +1448,73 @@ function DSATab({ onSolve }) {
       <WeakTopicsAlert weakTopics={weakTopics} />
       <MilestoneGrid questionDone={questionDone} />
 
-      {/* Topic rows */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 4,
-        }}
-      >
+      {/* Pattern filter tabs */}
+      <div>
         <div
           style={{
-            fontSize: 10,
-            fontWeight: 800,
-            color: "var(--txt3)",
-            letterSpacing: ".1em",
-            textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 8,
           }}
         >
-          Topic Progress
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: "var(--txt3)",
+              letterSpacing: ".1em",
+              textTransform: "uppercase",
+            }}
+          >
+            Algorithmic Patterns
+          </div>
+          <div style={{ fontSize: 10, color: "var(--txt3)" }}>
+            Click to see questions →
+          </div>
         </div>
-        <div style={{ fontSize: 10, color: "var(--txt3)" }}>
-          Click to see questions →
+        <div
+          style={{
+            display: "flex",
+            gap: 5,
+            overflowX: "auto",
+            paddingBottom: 8,
+            marginBottom: 4,
+          }}
+        >
+          {PATTERN_TAGS.map((tag) => {
+            const color = tagColors[tag] || "#5b8def";
+            const isActive = activeTag === tag;
+            const count =
+              tag === "All"
+                ? DSA_TOPICS.length
+                : DSA_TOPICS.filter((t) => t.tag === tag).length;
+            return (
+              <button
+                key={tag}
+                onClick={() => setActiveTag(tag)}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: isActive ? 700 : 500,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  border: `1px solid ${isActive ? color + "60" : "var(--border)"}`,
+                  background: isActive ? color + "18" : "var(--bg2)",
+                  color: isActive ? color : "var(--txt3)",
+                  transition: "all .15s",
+                }}
+              >
+                {tag} {count > 0 && tag !== "All" ? `(${count})` : ""}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {DSA_TOPICS.map((topic) => {
+      {/* Pattern rows */}
+      {filteredTopics.map((topic) => {
         const qs = DSA_QUESTIONS[topic.id] || [];
         const qDone = qs.filter((q) => questionDone[q.id]).length;
         const pct = qs.length > 0 ? Math.round((qDone / qs.length) * 100) : 0;
@@ -1427,6 +1531,7 @@ function DSATab({ onSolve }) {
           ? Math.floor((Date.now() - lastSeen) / 86400000)
           : null;
         const isWeak = weakTopics.find((t) => t.id === topic.id);
+        const tagColor = tagColors[topic.tag] || "#5b8def";
 
         return (
           <div
@@ -1450,20 +1555,37 @@ function DSATab({ onSolve }) {
             }
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {/* Icon */}
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 9,
+                  background: tagColor + "15",
+                  border: `1px solid ${tagColor}30`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  fontSize: 14,
+                }}
+              >
+                {topic.icon}
+              </div>
               <div style={{ flex: 1 }}>
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: 6,
+                    marginBottom: 5,
                   }}
                 >
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 8,
+                      gap: 7,
                       flexWrap: "wrap",
                     }}
                   >
@@ -1476,13 +1598,27 @@ function DSATab({ onSolve }) {
                     >
                       {topic.label}
                     </span>
+                    {/* tag pill */}
                     <span
                       style={{
                         fontSize: 9,
                         fontWeight: 700,
                         padding: "1px 6px",
                         borderRadius: 4,
-                        background: "#5b8def15",
+                        background: tagColor + "15",
+                        color: tagColor,
+                        letterSpacing: ".04em",
+                      }}
+                    >
+                      {topic.tag}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        padding: "1px 6px",
+                        borderRadius: 4,
+                        background: "rgba(91,141,239,0.1)",
                         color: "#5b8def",
                       }}
                     >
@@ -2754,7 +2890,7 @@ function ResumeTab() {
       <div
         style={{
           background: "var(--bg2)",
-          border: "1px solid #5b8def22",
+          border: "1px solid rgba(91,141,239,0.15)",
           borderRadius: 14,
           padding: 16,
         }}
@@ -3024,19 +3160,18 @@ function ResumeTab() {
 // ── Root View ─────────────────────────────────────────────────────────────────
 export default function PlacementPrepView() {
   const [activeTab, setActiveTab] = useState("dsa");
-  const [solveCount, setSolveCount] = useState(0);
-  const onSolve = useCallback(() => setSolveCount((c) => c + 1), []);
+  const [dsaScore, setDsaScore] = useState(() =>
+    calcReadinessScore(load("pp_dsa_qdone", {})),
+  );
 
-  const questionDone = useMemo(() => load("pp_dsa_qdone", {}), [solveCount]);
   const coreProgress = useMemo(() => load("pp_core_progress", {}), []);
   const skills = useMemo(() => load("pp_skills", {}), []);
   const resumeCheck = useMemo(() => load("pp_resume_check", {}), []);
   const companies = useMemo(() => load("pp_companies", []), []);
 
-  const dsaScore = useMemo(
-    () => calcReadinessScore(questionDone),
-    [questionDone],
-  );
+  const onSolve = useCallback(() => {
+    setDsaScore(calcReadinessScore(load("pp_dsa_qdone", {})));
+  }, []);
   const coreTotal = CORE_SUBJECTS.flatMap((s) => s.topics).length;
   const coreDone = Object.values(coreProgress).filter(Boolean).length;
   const corePct = Math.round((coreDone / coreTotal) * 100);
@@ -3052,7 +3187,7 @@ export default function PlacementPrepView() {
   const overallPct = Math.round(
     dsaScore * 0.35 + corePct * 0.25 + skillPct * 0.2 + resumePct * 0.2,
   );
-  const momentum = useMemo(() => getMomentum(), [solveCount]);
+  const momentum = useMemo(() => getMomentum(), [dsaScore]);
 
   const readiness =
     overallPct >= 80
@@ -3181,7 +3316,7 @@ export default function PlacementPrepView() {
                 fontFamily: "var(--mono)",
               }}
             >
-              DSA {dsaScore}%
+              DSA {dsaScore}% · {DSA_TOPICS.length} patterns
             </span>
           </div>
           <div
