@@ -1,5 +1,4 @@
 // app/api/analyze/route.js
-import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
 const groq = new Groq({
@@ -10,43 +9,98 @@ export async function POST(req) {
   try {
     const { message, context, history } = await req.json();
 
-    // Construct the system prompt with the user's live data
-    const systemPrompt = `
-      You are a specialized FAANG Placement Coach. You are strict, data-driven, but encouraging.
-      
-      CURRENT STUDENT DATA:
-      - DSA Score: ${context.dsa.score}% (${context.dsa.solved}/${context.dsa.total} solved)
-      - Weak Patterns: ${context.dsa.weakTopics.map((t) => t.label).join(", ") || "None currently"}
-      - Pace: ${context.pace?.lateDays > 0 ? `${context.pace.lateDays} days behind` : "On track"}
-      - Resume Health: ${context.resume.pct}%
-      - Target Date: ${context.pace?.projectedDate || "Not set"}
+    const weakList =
+      context.dsa.weakTopics?.map((t) => t.label).join(", ") || "None";
+    const staleList =
+      context.dsa.weakTopics
+        ?.filter((t) => t.isStale)
+        .map((t) => `${t.label} (${t.daysSince}d untouched)`)
+        .join(", ") || "None";
 
-      INSTRUCTIONS:
-      1. Answer the user's question specifically using the data above.
-      2. If they ask for a plan, prioritize their "Weak Patterns".
-      3. Keep answers concise (under 150 words) and formatted in Markdown.
-      4. Do not be generic. If they are behind pace, tell them to hurry up.
-    `;
+    const paceStatus = context.pace
+      ? context.pace.lateDays > 5
+        ? `${Math.round(context.pace.lateDays)} days behind — needs ${context.pace.requiredPerDay?.toFixed(1)} q/day but averaging ${context.pace.actualPerDay?.toFixed(1)}`
+        : context.pace.lateDays < -3
+          ? `${Math.abs(Math.round(context.pace.lateDays))} days ahead of schedule`
+          : "barely on pace"
+      : "no deadline set";
 
-    // Combine history for context (limit last 6 messages to save tokens)
+    const systemPrompt = `You are the placement intelligence engine inside a student's prep dashboard. You have full access to their real-time progress. You are not an AI assistant — you are a core analytical feature that gives strategic intelligence no other prep platform offers.
+
+LIVE STUDENT DATA:
+- DSA Progress: ${context.dsa.score}% complete (${context.dsa.solved}/${context.dsa.total} questions solved)
+- Pace Status: ${paceStatus}
+- Weak patterns needing attention: ${weakList}
+- Stale patterns not opened recently: ${staleList}
+- Core CS: ${context.core?.pct ?? 0}% revised
+- Resume Health: ${context.resume?.pct ?? 0}%
+- Skill Proficiency: ${context.skills?.pct ?? 0}%
+- Days to target: ${context.pace?.daysLeft ?? "not set"}
+- Questions remaining: ${context.pace?.remaining ?? "unknown"}
+
+RESPONSE RULES — STRICT:
+1. Never use ## or ### headings. Never use --- dividers. Never use bullet points with dashes.
+2. Bold short labels inline: e.g. "Focus area:" or "Risk:" or "Today's target:"
+3. Tone: sharp mentor, private briefing, zero fluff. Like a senior engineer coaching a junior.
+4. Always reference at least 2 specific numbers from the student's live data.
+5. Max 150 words. Dense and actionable.
+6. Never say "I" or "As an AI". Always use "You" and "Your".
+7. Zero generic advice. Everything derived from actual numbers above.
+8. Separate sections with a blank line. Max 4–5 visual lines.
+9. Be blunt about bad pace. Acknowledge good pace briefly, then raise the bar.
+10. Close every response with exactly one specific immediate action.`;
+
     const messages = [
       { role: "system", content: systemPrompt },
-      ...(history || []).slice(-6),
+      ...(history || []).slice(-8).map((m) => ({
+        role: m.role === "ai" ? "assistant" : m.role,
+        content: m.content,
+      })),
       { role: "user", content: message },
     ];
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: messages,
-      model: "llama-3.1-8b-instant",
-      temperature: 0.7,
-      max_tokens: 450,
+    // Create a streaming completion
+    const stream = await groq.chat.completions.create({
+      messages,
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.65,
+      max_tokens: 500,
+      stream: true,
     });
 
-    return NextResponse.json({
-      reply: chatCompletion.choices[0]?.message?.content,
+    // Return a ReadableStream (SSE-style)
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const token = chunk.choices[0]?.delta?.content || "";
+            if (token) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ token })}\n\n`),
+              );
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+    });
+
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
   } catch (error) {
     console.error("AI Error:", error);
-    return NextResponse.json({ error: "Coach is offline." }, { status: 500 });
+    return new Response(JSON.stringify({ error: "Coach is offline." }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

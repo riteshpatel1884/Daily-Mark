@@ -1,4 +1,8 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+"use client";
+// ─────────────────────────────────────────────────────────────────────────────
+// PlacementPrepView.jsx  —  Pattern-based DSA tracker + AI Coach
+// ─────────────────────────────────────────────────────────────────────────────
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   DSA_QUESTIONS,
   DSA_TOPICS,
@@ -1160,162 +1164,506 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
   );
 }
 
-// ── Smart Analysis Panel (NEW FEATURE) ────────────────────────────────────────
-function SmartAnalysisPanel({ isOpen, onClose, data }) {
-  const [analysis, setAnalysis] = useState("");
+// ── NEW: AI Coach Tab // ── AI Coach Tab ─────────────────────────────────────────────────────────────
+function AICoachTab({ contextData }) {
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content:
+        "Your prep data is loaded. Ask me anything — pace analysis, what to study today, pattern risk, or a mock question. I have full context on where you stand right now.",
+    },
+  ]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [lastRun, setLastRun] = useState(() => load("pp_ai_last_run", null));
-  const [cachedResult, setCachedResult] = useState(() => load("pp_ai_result", ""));
+  const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (cachedResult) setAnalysis(cachedResult);
-  }, [cachedResult]);
+    if (scrollRef.current)
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, loading]);
 
-  async function generateInsights() {
+  async function sendMessage(text) {
+    if (!text.trim() || loading) return;
+    const userMsg = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
     setLoading(true);
-    try {
-      const payload = {
-        dsa: {
-          score: data.dsaScore,
-          solved: data.totalSolved,
-          total: data.totalProblems,
-          weakTopics: data.weakTopics.map(t => ({ label: t.label, pct: t.pct })),
-        },
-        core: { pct: data.corePct },
-        resume: { pct: data.resumePct },
-        skills: { pct: data.skillPct },
-        companies: { count: data.companies.length },
-        pace: data.pace,
-      };
 
+    // Insert empty AI message to stream into
+    setMessages((prev) => [...prev, { role: "ai", content: "" }]);
+
+    try {
       const res = await fetch("/api/analyze", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          message: text,
+          context: contextData,
+          history: messages.map((m) => ({ role: m.role, content: m.content })),
+        }),
         headers: { "Content-Type": "application/json" },
       });
-      
-      const json = await res.json();
-      if (json.analysis) {
-        setAnalysis(json.analysis);
-        save("pp_ai_result", json.analysis);
-        const now = Date.now();
-        setLastRun(now);
-        save("pp_ai_last_run", now);
+
+      if (!res.ok) throw new Error("Bad response");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      setLoading(false); // hide dots, streaming begins
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") break;
+          try {
+            const { token } = JSON.parse(data);
+            if (token) {
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                updated[updated.length - 1] = {
+                  ...last,
+                  content: last.content + token,
+                };
+                return updated;
+              });
+            }
+          } catch {
+            // skip malformed chunk
+          }
+        }
       }
-    } catch (e) {
-      console.error(e);
-      setAnalysis("⚠️ **Connection Error**: Could not reach your coach. Please check your internet connection.");
-    } finally {
+    } catch {
       setLoading(false);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "ai",
+          content: "Connection error. Check your network or API key.",
+        };
+        return updated;
+      });
     }
   }
 
-  // Simple renderer to handle Bold and Newlines without dependencies
+  const SUGGESTIONS = [
+    { label: "Today's Plan", prompt: "Give me a focused 3-task plan for today based on my weak spots." },
+    { label: "Pace Analysis", prompt: "Am I going to make it by my deadline? Be honest and give me numbers." },
+    { label: "Biggest Risk", prompt: "What's the single biggest risk in my prep right now and why?" },
+    { label: "Pattern Priority", prompt: "Which patterns should I attack this week and in what order?" },
+    { label: "Mock Question", prompt: "Ask me a conceptual interview question based on my weakest pattern." },
+    { label: "Score Breakdown", prompt: "Break down my readiness score — what's dragging it down the most?" },
+  ];
+
   const renderText = (text) => {
-    return text.split('\n').map((line, i) => {
-      // Basic bold parsing: **text** -> <strong>text</strong>
+    const lines = text
+      .replace(/^#{1,3}\s+/gm, "")
+      .replace(/^---+$/gm, "")
+      .replace(/^\s*[-–—]\s+/gm, "· ")
+      .split("\n");
+
+    return lines.map((line, i) => {
+      if (!line.trim()) return <div key={i} style={{ height: 10 }} />;
       const parts = line.split(/(\*\*.*?\*\*)/g);
       return (
-        <div key={i} style={{ minHeight: line.trim() ? "auto" : 8, marginBottom: 4 }}>
-          {parts.map((part, j) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-              return <strong key={j} style={{color: "#5b8def"}}>{part.slice(2, -2)}</strong>;
-            }
-            return <span key={j}>{part}</span>;
-          })}
+        <div key={i} style={{ marginBottom: 3, lineHeight: 1.55 }}>
+          {parts.map((part, j) =>
+            part.startsWith("**") && part.endsWith("**") ? (
+              <strong key={j} style={{ color: "inherit", fontWeight: 700 }}>
+                {part.slice(2, -2)}
+              </strong>
+            ) : (
+              part
+            )
+          )}
         </div>
       );
     });
   };
 
-  if (!isOpen) return null;
+  const dsaScore = contextData?.dsa?.score ?? 0;
+  const paceLateDays = contextData?.pace?.lateDays ?? 0;
+  const resumePct = contextData?.resume?.pct ?? 0;
+
+  const badges = [
+    {
+      label: `DSA ${dsaScore}%`,
+      color: dsaScore >= 70 ? "#4caf7d" : dsaScore >= 40 ? "#d4b44a" : "#ef4444",
+    },
+    {
+      label:
+        paceLateDays > 5
+          ? `${Math.round(paceLateDays)}d late`
+          : paceLateDays < -3
+          ? `${Math.abs(Math.round(paceLateDays))}d early`
+          : "On Pace",
+      color: paceLateDays > 5 ? "#ef4444" : paceLateDays < -3 ? "#4caf7d" : "#d4b44a",
+    },
+    {
+      label: `Resume ${resumePct}%`,
+      color: resumePct >= 80 ? "#4caf7d" : resumePct >= 50 ? "#d4b44a" : "#ef4444",
+    },
+  ];
 
   return (
-    <>
-      <div 
-        onClick={onClose}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 998, backdropFilter: "blur(2px)" }}
-      />
-      <div style={{
-        position: "fixed",
-        top: 0, right: 0, bottom: 0,
-        width: "90%", maxWidth: 400,
+    <div
+      style={{
+        height: "calc(100vh - 210px)",
+        minHeight: 480,
+        display: "flex",
+        flexDirection: "column",
         background: "var(--bg)",
-        borderLeft: "1px solid var(--border)",
-        zIndex: 999,
-        padding: "20px",
-        boxShadow: "-10px 0 40px rgba(0,0,0,0.1)",
-        display: "flex", flexDirection: "column",
-        animation: "slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
-      }}>
-        <style>{`@keyframes slideLeft { from { transform: translateX(100%); } to { transform: translateX(0); } } .spinner { font-size: 14px; font-weight: bold; color: #5b8def; }`}</style>
-        
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 24 }}>🤖</span>
+        border: "1px solid var(--border)",
+        borderRadius: 18,
+        overflow: "hidden",
+      }}
+    >
+      {/* ── Header ── */}
+      <div
+        style={{
+          padding: "14px 16px 12px",
+          borderBottom: "1px solid var(--border)",
+          background: "var(--bg2)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 17,
+                flexShrink: 0,
+              }}
+            >
+              🧠
+            </div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--txt)" }}>AI Career Coach</div>
-              <div style={{ fontSize: 11, color: "var(--txt3)" }}>Personalized daily strategy</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: "var(--txt)",
+                  lineHeight: 1.2,
+                }}
+              >
+                Placement Intelligence
+              </div>
+              <div style={{ fontSize: 10, color: "var(--txt3)", marginTop: 1 }}>
+                Live data · {contextData?.dsa?.solved ?? 0} questions tracked
+              </div>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "var(--txt3)" }}>×</button>
-        </div>
 
-        {/* Content Area */}
-        <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
-          {!analysis && !loading && (
-            <div style={{ textAlign: "center", marginTop: 60, color: "var(--txt3)" }}>
-              <div style={{ fontSize: 40, marginBottom: 10 }}>📊</div>
-              <p style={{ fontWeight: 600, color: "var(--txt)" }}>Ready to analyze your progress?</p>
-              <p style={{ fontSize: 12, marginTop: 6 }}>I'll check your DSA patterns, pace, and resume to generate a daily plan.</p>
-            </div>
-          )}
-
-          {loading && (
-            <div style={{ textAlign: "center", marginTop: 80, color: "#5b8def" }}>
-              <div className="spinner" style={{ marginBottom: 15 }}>Running Analysis...</div>
-              <div style={{ fontSize: 12, color: "var(--txt3)" }}>Crunching your weak spots...</div>
-            </div>
-          )}
-
-          {analysis && !loading && (
-            <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--txt2)" }}>
-              {renderText(analysis)}
-            </div>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-          <button
-            onClick={generateInsights}
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: 12,
-              background: "linear-gradient(135deg, #5b8def 0%, #3b6dbf 100%)",
-              color: "white",
-              border: "none",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: loading ? "not-allowed" : "pointer",
-              boxShadow: "0 4px 12px rgba(91, 141, 239, 0.3)",
-              opacity: loading ? 0.7 : 1,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8
-            }}
-          >
-            {loading ? "Analyzing..." : (analysis ? "Regenerate Analysis" : "Generate Report")}
-          </button>
-          {lastRun && (
-            <div style={{ textAlign: "center", fontSize: 10, color: "var(--txt3)", marginTop: 8 }}>
-              Last updated: {new Date(lastRun).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            </div>
-          )}
+          {/* Live snapshot badges */}
+          <div style={{ display: "flex", gap: 5 }}>
+            {badges.map((b) => (
+              <div
+                key={b.label}
+                style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  padding: "3px 7px",
+                  borderRadius: 6,
+                  background: b.color + "18",
+                  color: b.color,
+                  border: `1px solid ${b.color}30`,
+                  letterSpacing: ".04em",
+                }}
+              >
+                {b.label}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </>
+
+      {/* ── Messages ── */}
+      <div
+        ref={scrollRef}
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          scrollbarWidth: "thin",
+          scrollbarColor: "var(--border) transparent",
+        }}
+      >
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: m.role === "user" ? "flex-end" : "flex-start",
+              alignItems: "flex-end",
+              gap: 8,
+            }}
+          >
+            {m.role !== "user" && (
+              <div
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  flexShrink: 0,
+                  marginBottom: 2,
+                }}
+              >
+                🧠
+              </div>
+            )}
+            <div
+              style={{
+                maxWidth: "82%",
+                padding: "11px 15px",
+                borderRadius:
+                  m.role === "user"
+                    ? "16px 16px 4px 16px"
+                    : "4px 16px 16px 16px",
+                background:
+                  m.role === "user"
+                    ? "linear-gradient(135deg, #5b8def, #6366f1)"
+                    : "var(--bg2)",
+                color: m.role === "user" ? "#fff" : "var(--txt)",
+                border: m.role === "user" ? "none" : "1px solid var(--border)",
+                fontSize: 13,
+                lineHeight: 1.55,
+                boxShadow:
+                  m.role === "user"
+                    ? "0 2px 12px rgba(91,141,239,0.25)"
+                    : "0 1px 3px rgba(0,0,0,0.05)",
+              }}
+            >
+              {renderText(m.content)}
+              {/* Blinking cursor on the last streaming message */}
+              {m.role === "ai" &&
+                i === messages.length - 1 &&
+                !loading &&
+                m.content !== "" && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 2,
+                      height: 13,
+                      background: "var(--txt3)",
+                      marginLeft: 2,
+                      verticalAlign: "middle",
+                      animation: "blink 1s step-end infinite",
+                    }}
+                  />
+                )}
+            </div>
+          </div>
+        ))}
+
+        {/* Typing dots — only shown before first token arrives */}
+        {loading && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 8,
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 13,
+              }}
+            >
+              🧠
+            </div>
+            <div
+              style={{
+                padding: "11px 16px",
+                borderRadius: "4px 16px 16px 16px",
+                background: "var(--bg2)",
+                border: "1px solid var(--border)",
+                display: "flex",
+                gap: 5,
+                alignItems: "center",
+              }}
+            >
+              {[0, 0.18, 0.36].map((delay, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "#6366f1",
+                    animation: `pulse 1.1s ${delay}s ease-in-out infinite`,
+                    opacity: 0.7,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { transform: scale(0.8); opacity: 0.4; }
+            50%       { transform: scale(1.2); opacity: 1; }
+          }
+          @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0; }
+          }
+        `}</style>
+      </div>
+
+      {/* ── Suggestion Chips ── */}
+      <div
+        style={{
+          padding: "10px 14px 0",
+          background: "var(--bg2)",
+          borderTop: "1px solid var(--border)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            overflowX: "auto",
+            paddingBottom: 10,
+            scrollbarWidth: "none",
+          }}
+        >
+          {SUGGESTIONS.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => sendMessage(s.prompt)}
+              disabled={loading}
+              style={{
+                flexShrink: 0,
+                padding: "6px 13px",
+                borderRadius: 20,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--txt3)",
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: loading ? "default" : "pointer",
+                transition: "all 0.18s",
+                opacity: loading ? 0.5 : 1,
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.borderColor = "#6366f1";
+                  e.currentTarget.style.color = "#6366f1";
+                  e.currentTarget.style.background = "rgba(99,102,241,0.06)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--border)";
+                e.currentTarget.style.color = "var(--txt3)";
+                e.currentTarget.style.background = "var(--bg)";
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Input Bar ── */}
+      <div
+        style={{
+          padding: "10px 14px 14px",
+          background: "var(--bg2)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            padding: "4px 4px 4px 14px",
+            transition: "border-color .2s",
+          }}
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) =>
+              e.key === "Enter" && !e.shiftKey && sendMessage(input)
+            }
+            placeholder="Ask about your prep, pace, weak spots…"
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              fontSize: 13,
+              color: "var(--txt)",
+              outline: "none",
+              padding: "7px 0",
+            }}
+          />
+          <button
+            onClick={() => sendMessage(input)}
+            disabled={loading || !input.trim()}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 11,
+              border: "none",
+              background:
+                input.trim() && !loading
+                  ? "linear-gradient(135deg, #5b8def, #6366f1)"
+                  : "var(--bg3)",
+              color: input.trim() && !loading ? "white" : "var(--txt3)",
+              cursor: input.trim() && !loading ? "pointer" : "default",
+              fontWeight: 700,
+              fontSize: 15,
+              transition: "all .2s",
+              flexShrink: 0,
+            }}
+          >
+            ↑
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1366,34 +1714,34 @@ function DSATab({ onSolve }) {
     setShowDatePicker(false);
   }
 
- function toggleQuestion(qid, forceValue) {
-   setQuestionDone((prev) => {
-     const next = { ...prev };
-     let solved = false;
+  function toggleQuestion(qid, forceValue) {
+    setQuestionDone((prev) => {
+      const next = { ...prev };
+      let solved = false;
 
-     if (forceValue === true) {
-       next[qid] = true;
-     } else if (forceValue === false) {
-       delete next[qid];
-     } else if (next[qid]) {
-       delete next[qid];
-     } else {
-       next[qid] = true;
-       solved = true;
-     }
+      if (forceValue === true) {
+        next[qid] = true;
+      } else if (forceValue === false) {
+        delete next[qid];
+      } else if (next[qid]) {
+        delete next[qid];
+      } else {
+        next[qid] = true;
+        solved = true;
+      }
 
-     save("pp_dsa_qdone", next);
+      save("pp_dsa_qdone", next);
 
-     if (solved) {
-       setTimeout(() => {
-         logActivity(1);
-         onSolve && onSolve();
-       }, 0);
-     }
+      if (solved) {
+        setTimeout(() => {
+          logActivity(1);
+          onSolve && onSolve();
+        }, 0);
+      }
 
-     return next;
-   });
- }
+      return next;
+    });
+  }
 
   function openTopicModal(topic) {
     setTopicLastSeen((prev) => {
@@ -3312,47 +3660,69 @@ function ResumeTab() {
 // ── Root View ─────────────────────────────────────────────────────────────────
 export default function PlacementPrepView() {
   const [activeTab, setActiveTab] = useState("dsa");
-  const [showAI, setShowAI] = useState(false);
 
-  const [questionDone, setQuestionDone] = useState(() =>
-    load("pp_dsa_qdone", {}),
-  );
-  const [topicLastSeen, setTopicLastSeen] = useState(() =>
-    load("pp_topic_last_seen", {}),
-  );
-  const [targetDate, setTargetDate] = useState(() =>
-    load("pp_target_date", ""),
-  );
-
-  const dsaScore = useMemo(() => calcReadinessScore(questionDone), [questionDone]);
+  // Load All Data for Context
+  const [questionDone] = useState(() => load("pp_dsa_qdone", {}));
+  const [topicLastSeen] = useState(() => load("pp_topic_last_seen", {}));
+  const [targetDate] = useState(() => load("pp_target_date", ""));
   const coreProgress = useMemo(() => load("pp_core_progress", {}), []);
   const skills = useMemo(() => load("pp_skills", {}), []);
   const resumeCheck = useMemo(() => load("pp_resume_check", {}), []);
-  const companies = useMemo(() => load("pp_companies", []), []);
 
+  // Derived Metrics
+  const dsaScore = useMemo(
+    () => calcReadinessScore(questionDone),
+    [questionDone],
+  );
   const totalSolved = getSolvedCount(questionDone);
   const totalProblems = getTotalQuestions();
-  
-  const pace = useMemo(() => calcPace(targetDate, questionDone), [targetDate, questionDone]);
-  const weakTopics = useMemo(() => getWeakTopics(questionDone, topicLastSeen), [questionDone, topicLastSeen]);
-
-  const coreTotal = CORE_SUBJECTS.flatMap((s) => s.topics).length;
-  const coreDone = Object.values(coreProgress).filter(Boolean).length;
-  const corePct = Math.round((coreDone / coreTotal) * 100);
-  
-  const skillPct = Math.min(100, Math.round((Object.values(skills).filter((v) => v >= 3).length / 8) * 100));
-  const resumePct = Math.round((Object.values(resumeCheck).filter(Boolean).length / RESUME_CHECKLIST.length) * 100);
-  const overallPct = Math.round(dsaScore * 0.35 + corePct * 0.25 + skillPct * 0.2 + resumePct * 0.2);
+  const pace = useMemo(
+    () => calcPace(targetDate, questionDone),
+    [targetDate, questionDone],
+  );
+  const weakTopics = useMemo(
+    () => getWeakTopics(questionDone, topicLastSeen),
+    [questionDone, topicLastSeen],
+  );
   const momentum = useMemo(() => getMomentum(), [dsaScore]);
+  const corePct = Math.round(
+    (Object.values(coreProgress).filter(Boolean).length / 29) * 100,
+  );
+  const skillPct = Math.min(
+    100,
+    Math.round((Object.values(skills).filter((v) => v >= 3).length / 8) * 100),
+  );
+  const resumePct = Math.round(
+    (Object.values(resumeCheck).filter(Boolean).length /
+      RESUME_CHECKLIST.length) *
+      100,
+  );
+  const overallPct = Math.round(
+    dsaScore * 0.35 + corePct * 0.25 + skillPct * 0.2 + resumePct * 0.2,
+  );
 
-  const readiness = overallPct >= 80 ? { label: "Interview Ready 🚀", color: "#4caf7d" }
-      : overallPct >= 60 ? { label: "Almost There 💪", color: "#5b8def" }
-      : overallPct >= 35 ? { label: "Getting Warmed Up 🔥", color: "#d4b44a" }
-      : { label: "Just Getting Started ⚡", color: "#e8924a" };
+  const readiness =
+    overallPct >= 80
+      ? { label: "Interview Ready 🚀", color: "#4caf7d" }
+      : overallPct >= 60
+        ? { label: "Almost There 💪", color: "#5b8def" }
+        : overallPct >= 35
+          ? { label: "Getting Warmed Up 🔥", color: "#d4b44a" }
+          : { label: "Just Started ⚡", color: "#e8924a" };
 
-  const onSolve = useCallback(() => {
-    setQuestionDone(load("pp_dsa_qdone", {}));
-  }, []);
+  // Prepare Context for AI
+  const aiContext = {
+    dsa: {
+      score: dsaScore,
+      solved: totalSolved,
+      total: totalProblems,
+      weakTopics,
+    },
+    pace,
+    core: { pct: corePct },
+    resume: { pct: resumePct },
+    skills: { pct: skillPct },
+  };
 
   const TABS = [
     { id: "dsa", label: "DSA", emoji: "💻" },
@@ -3360,13 +3730,8 @@ export default function PlacementPrepView() {
     { id: "skills", label: "Skills", emoji: "⚙️" },
     { id: "companies", label: "Companies", emoji: "🏢" },
     { id: "resume", label: "Resume", emoji: "📄" },
+    { id: "ai_coach", label: "AI Coach", emoji: "🤖" }, // NEW TAB
   ];
-
-  // Aggregated Data Object for AI
-  const aiData = {
-    dsaScore, totalSolved, totalProblems, weakTopics, pace,
-    corePct, skillPct, resumePct, companies
-  };
 
   return (
     <div
@@ -3376,20 +3741,14 @@ export default function PlacementPrepView() {
         boxSizing: "border-box",
         background: "var(--bg)",
         minHeight: "100vh",
-        fontFamily: "-apple-system, 'Helvetica Neue', sans-serif",
+        fontFamily: "-apple-system, sans-serif",
       }}
     >
       <style>{`
         @keyframes fadeUp { 0% { opacity:0; transform:translateY(10px); } 100% { opacity:1; transform:none; } }
         .pp-tab { animation: fadeUp .25s ease forwards; }
         * { box-sizing: border-box; }
-        input, select, button { font-family: inherit; }
-        .ai-pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(91, 141, 239, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(91, 141, 239, 0); } 100% { box-shadow: 0 0 0 0 rgba(91, 141, 239, 0); } }
       `}</style>
-
-      {/* NEW: AI Panel */}
-      <SmartAnalysisPanel isOpen={showAI} onClose={() => setShowAI(false)} data={aiData} />
 
       <div style={{ padding: "20px 16px 0" }}>
         <div
@@ -3432,167 +3791,26 @@ export default function PlacementPrepView() {
               >
                 {momentum.icon} Momentum: {momentum.label}
               </span>
-              <span style={{ fontSize: 10, color: "var(--txt3)" }}>
-                · {momentum.activeDays}/7 active days
-              </span>
             </div>
           </div>
-          
-          {/* NEW: AI Button */}
-          <button 
-            onClick={() => setShowAI(true)}
-            className="ai-pulse"
-            style={{
-              background: "linear-gradient(135deg, #2a2a2a 0%, #000 100%)",
-              border: "1px solid #333",
-              color: "white",
-              padding: "8px 16px",
-              borderRadius: 20,
-              display: "flex", alignItems: "center", gap: 8,
-              cursor: "pointer",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
-            }}
-          >
-            <span style={{ fontSize: 16 }}>✨</span>
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#a5b4fc" }}>AI Insight</div>
-              <div style={{ fontSize: 9, color: "#cbd5e1" }}>Get Daily Plan</div>
-            </div>
-          </button>
-        </div>
-
-        <div
-          style={{
-            background: "var(--bg2)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-            padding: "13px 16px",
-            marginBottom: 14,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 10,
-            }}
-          >
-            <span
-              style={{ fontSize: 13, fontWeight: 800, color: readiness.color }}
-            >
-              {readiness.label}
-            </span>
-            <span
+          <div style={{ textAlign: "center", flexShrink: 0 }}>
+            <ProgressRing pct={overallPct} size={64} color={readiness.color} />
+            <div
               style={{
-                fontSize: 10,
+                fontSize: 8,
+                fontWeight: 800,
                 color: "var(--txt3)",
-                fontFamily: "var(--mono)",
+                marginTop: 4,
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
               }}
             >
-              DSA {dsaScore}% · {DSA_TOPICS.length} patterns
-            </span>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4,1fr)",
-              gap: 8,
-            }}
-          >
-            {[
-              { label: "DSA", pct: dsaScore, color: "#5b8def" },
-              { label: "Core CS", pct: corePct, color: "#9b72cf" },
-              { label: "Skills", pct: skillPct, color: "#d4b44a" },
-              { label: "Resume", pct: resumePct, color: "#4caf7d" },
-            ].map((s) => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: "var(--txt3)",
-                    marginBottom: 4,
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.label}
-                </div>
-                <div
-                  style={{
-                    height: 3,
-                    background: "var(--bg3)",
-                    borderRadius: 99,
-                    overflow: "hidden",
-                    marginBottom: 3,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${s.pct}%`,
-                      background: s.color,
-                      borderRadius: 99,
-                      transition: "width .5s",
-                    }}
-                  />
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    color: s.color,
-                    fontFamily: "var(--mono)",
-                  }}
-                >
-                  {s.pct}%
-                </div>
-              </div>
-            ))}
+              Readiness
+            </div>
           </div>
         </div>
 
-        {companies.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              padding: "10px 14px",
-              background: "var(--bg2)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              marginBottom: 14,
-              flexWrap: "wrap",
-            }}
-          >
-            <span style={{ fontSize: 12, color: "var(--txt3)" }}>Tracking</span>
-            <span
-              style={{ fontSize: 12, fontWeight: 600, color: "var(--txt2)" }}
-            >
-              {companies.length} companies
-            </span>
-            {companies.filter((c) => c.status === "Offer").length > 0 && (
-              <>
-                <span style={{ color: "var(--border)" }}>·</span>
-                <span
-                  style={{ fontSize: 12, fontWeight: 700, color: "#4caf7d" }}
-                >
-                  🎉 {companies.filter((c) => c.status === "Offer").length}{" "}
-                  offer!
-                </span>
-              </>
-            )}
-            {companies.filter((c) => c.status === "Interview").length > 0 && (
-              <>
-                <span style={{ color: "var(--border)" }}>·</span>
-                <span style={{ fontSize: 12, color: "#9b72cf" }}>
-                  {companies.filter((c) => c.status === "Interview").length}{" "}
-                  interviewing
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
+        {/* Tab Navigation */}
         <div
           style={{
             display: "flex",
@@ -3620,6 +3838,10 @@ export default function PlacementPrepView() {
                 fontWeight: activeTab === t.id ? 800 : 500,
                 cursor: "pointer",
                 transition: "all .15s",
+                boxShadow:
+                  activeTab === t.id && t.id === "ai_coach"
+                    ? "0 4px 12px rgba(99, 102, 241, 0.2)"
+                    : "none",
               }}
             >
               <span>{t.emoji}</span>
@@ -3634,11 +3856,12 @@ export default function PlacementPrepView() {
         key={activeTab}
         style={{ padding: "0 16px 40px" }}
       >
-        {activeTab === "dsa" && <DSATab onSolve={onSolve} />}
+        {activeTab === "dsa" && <DSATab />}
         {activeTab === "core" && <CoreCSTab />}
         {activeTab === "skills" && <SkillsTab />}
         {activeTab === "companies" && <CompaniesTab />}
         {activeTab === "resume" && <ResumeTab />}
+        {activeTab === "ai_coach" && <AICoachTab contextData={aiContext} />}
       </div>
     </div>
   );
