@@ -1,7 +1,3 @@
-"use client";
-// ─────────────────────────────────────────────────────────────────────────────
-// PlacementPrepView.jsx  —  Pattern-based DSA tracker
-// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   DSA_QUESTIONS,
@@ -1164,6 +1160,165 @@ function QuestionModal({ topic, doneMap, onToggle, onClose }) {
   );
 }
 
+// ── Smart Analysis Panel (NEW FEATURE) ────────────────────────────────────────
+function SmartAnalysisPanel({ isOpen, onClose, data }) {
+  const [analysis, setAnalysis] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [lastRun, setLastRun] = useState(() => load("pp_ai_last_run", null));
+  const [cachedResult, setCachedResult] = useState(() => load("pp_ai_result", ""));
+
+  useEffect(() => {
+    if (cachedResult) setAnalysis(cachedResult);
+  }, [cachedResult]);
+
+  async function generateInsights() {
+    setLoading(true);
+    try {
+      const payload = {
+        dsa: {
+          score: data.dsaScore,
+          solved: data.totalSolved,
+          total: data.totalProblems,
+          weakTopics: data.weakTopics.map(t => ({ label: t.label, pct: t.pct })),
+        },
+        core: { pct: data.corePct },
+        resume: { pct: data.resumePct },
+        skills: { pct: data.skillPct },
+        companies: { count: data.companies.length },
+        pace: data.pace,
+      };
+
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      const json = await res.json();
+      if (json.analysis) {
+        setAnalysis(json.analysis);
+        save("pp_ai_result", json.analysis);
+        const now = Date.now();
+        setLastRun(now);
+        save("pp_ai_last_run", now);
+      }
+    } catch (e) {
+      console.error(e);
+      setAnalysis("⚠️ **Connection Error**: Could not reach your coach. Please check your internet connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Simple renderer to handle Bold and Newlines without dependencies
+  const renderText = (text) => {
+    return text.split('\n').map((line, i) => {
+      // Basic bold parsing: **text** -> <strong>text</strong>
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <div key={i} style={{ minHeight: line.trim() ? "auto" : 8, marginBottom: 4 }}>
+          {parts.map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j} style={{color: "#5b8def"}}>{part.slice(2, -2)}</strong>;
+            }
+            return <span key={j}>{part}</span>;
+          })}
+        </div>
+      );
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div 
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 998, backdropFilter: "blur(2px)" }}
+      />
+      <div style={{
+        position: "fixed",
+        top: 0, right: 0, bottom: 0,
+        width: "90%", maxWidth: 400,
+        background: "var(--bg)",
+        borderLeft: "1px solid var(--border)",
+        zIndex: 999,
+        padding: "20px",
+        boxShadow: "-10px 0 40px rgba(0,0,0,0.1)",
+        display: "flex", flexDirection: "column",
+        animation: "slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+      }}>
+        <style>{`@keyframes slideLeft { from { transform: translateX(100%); } to { transform: translateX(0); } } .spinner { font-size: 14px; font-weight: bold; color: #5b8def; }`}</style>
+        
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 24 }}>🤖</span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--txt)" }}>AI Career Coach</div>
+              <div style={{ fontSize: 11, color: "var(--txt3)" }}>Personalized daily strategy</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "var(--txt3)" }}>×</button>
+        </div>
+
+        {/* Content Area */}
+        <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
+          {!analysis && !loading && (
+            <div style={{ textAlign: "center", marginTop: 60, color: "var(--txt3)" }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>📊</div>
+              <p style={{ fontWeight: 600, color: "var(--txt)" }}>Ready to analyze your progress?</p>
+              <p style={{ fontSize: 12, marginTop: 6 }}>I'll check your DSA patterns, pace, and resume to generate a daily plan.</p>
+            </div>
+          )}
+
+          {loading && (
+            <div style={{ textAlign: "center", marginTop: 80, color: "#5b8def" }}>
+              <div className="spinner" style={{ marginBottom: 15 }}>Running Analysis...</div>
+              <div style={{ fontSize: 12, color: "var(--txt3)" }}>Crunching your weak spots...</div>
+            </div>
+          )}
+
+          {analysis && !loading && (
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--txt2)" }}>
+              {renderText(analysis)}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+          <button
+            onClick={generateInsights}
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: 12,
+              background: "linear-gradient(135deg, #5b8def 0%, #3b6dbf 100%)",
+              color: "white",
+              border: "none",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: "0 4px 12px rgba(91, 141, 239, 0.3)",
+              opacity: loading ? 0.7 : 1,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+            }}
+          >
+            {loading ? "Analyzing..." : (analysis ? "Regenerate Analysis" : "Generate Report")}
+          </button>
+          {lastRun && (
+            <div style={{ textAlign: "center", fontSize: 10, color: "var(--txt3)", marginTop: 8 }}>
+              Last updated: {new Date(lastRun).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── DSA Tab ───────────────────────────────────────────────────────────────────
 function DSATab({ onSolve }) {
   const [questionDone, setQuestionDone] = useState(() =>
@@ -1229,7 +1384,6 @@ function DSATab({ onSolve }) {
 
      save("pp_dsa_qdone", next);
 
-     // Fix: Defer the parent update to avoid "Cannot update component while rendering" error
      if (solved) {
        setTimeout(() => {
          logActivity(1);
@@ -1259,7 +1413,6 @@ function DSATab({ onSolve }) {
           ? { label: "Needs Work 🔥", color: "#e8924a" }
           : { label: "Just Starting ⚡", color: "#ef4444" };
 
-  // Tag color map
   const tagColors = {
     Array: "#5b8def",
     "Array/String": "#5b8def",
@@ -1598,7 +1751,6 @@ function DSATab({ onSolve }) {
                     >
                       {topic.label}
                     </span>
-                    {/* tag pill */}
                     <span
                       style={{
                         fontSize: 9,
@@ -3160,43 +3312,47 @@ function ResumeTab() {
 // ── Root View ─────────────────────────────────────────────────────────────────
 export default function PlacementPrepView() {
   const [activeTab, setActiveTab] = useState("dsa");
-  const [dsaScore, setDsaScore] = useState(() =>
-    calcReadinessScore(load("pp_dsa_qdone", {})),
+  const [showAI, setShowAI] = useState(false);
+
+  const [questionDone, setQuestionDone] = useState(() =>
+    load("pp_dsa_qdone", {}),
+  );
+  const [topicLastSeen, setTopicLastSeen] = useState(() =>
+    load("pp_topic_last_seen", {}),
+  );
+  const [targetDate, setTargetDate] = useState(() =>
+    load("pp_target_date", ""),
   );
 
+  const dsaScore = useMemo(() => calcReadinessScore(questionDone), [questionDone]);
   const coreProgress = useMemo(() => load("pp_core_progress", {}), []);
   const skills = useMemo(() => load("pp_skills", {}), []);
   const resumeCheck = useMemo(() => load("pp_resume_check", {}), []);
   const companies = useMemo(() => load("pp_companies", []), []);
 
-  const onSolve = useCallback(() => {
-    setDsaScore(calcReadinessScore(load("pp_dsa_qdone", {})));
-  }, []);
+  const totalSolved = getSolvedCount(questionDone);
+  const totalProblems = getTotalQuestions();
+  
+  const pace = useMemo(() => calcPace(targetDate, questionDone), [targetDate, questionDone]);
+  const weakTopics = useMemo(() => getWeakTopics(questionDone, topicLastSeen), [questionDone, topicLastSeen]);
+
   const coreTotal = CORE_SUBJECTS.flatMap((s) => s.topics).length;
   const coreDone = Object.values(coreProgress).filter(Boolean).length;
   const corePct = Math.round((coreDone / coreTotal) * 100);
-  const skillPct = Math.min(
-    100,
-    Math.round((Object.values(skills).filter((v) => v >= 3).length / 8) * 100),
-  );
-  const resumePct = Math.round(
-    (Object.values(resumeCheck).filter(Boolean).length /
-      RESUME_CHECKLIST.length) *
-      100,
-  );
-  const overallPct = Math.round(
-    dsaScore * 0.35 + corePct * 0.25 + skillPct * 0.2 + resumePct * 0.2,
-  );
+  
+  const skillPct = Math.min(100, Math.round((Object.values(skills).filter((v) => v >= 3).length / 8) * 100));
+  const resumePct = Math.round((Object.values(resumeCheck).filter(Boolean).length / RESUME_CHECKLIST.length) * 100);
+  const overallPct = Math.round(dsaScore * 0.35 + corePct * 0.25 + skillPct * 0.2 + resumePct * 0.2);
   const momentum = useMemo(() => getMomentum(), [dsaScore]);
 
-  const readiness =
-    overallPct >= 80
-      ? { label: "Interview Ready 🚀", color: "#4caf7d" }
-      : overallPct >= 60
-        ? { label: "Almost There 💪", color: "#5b8def" }
-        : overallPct >= 35
-          ? { label: "Getting Warmed Up 🔥", color: "#d4b44a" }
-          : { label: "Just Getting Started ⚡", color: "#e8924a" };
+  const readiness = overallPct >= 80 ? { label: "Interview Ready 🚀", color: "#4caf7d" }
+      : overallPct >= 60 ? { label: "Almost There 💪", color: "#5b8def" }
+      : overallPct >= 35 ? { label: "Getting Warmed Up 🔥", color: "#d4b44a" }
+      : { label: "Just Getting Started ⚡", color: "#e8924a" };
+
+  const onSolve = useCallback(() => {
+    setQuestionDone(load("pp_dsa_qdone", {}));
+  }, []);
 
   const TABS = [
     { id: "dsa", label: "DSA", emoji: "💻" },
@@ -3205,6 +3361,12 @@ export default function PlacementPrepView() {
     { id: "companies", label: "Companies", emoji: "🏢" },
     { id: "resume", label: "Resume", emoji: "📄" },
   ];
+
+  // Aggregated Data Object for AI
+  const aiData = {
+    dsaScore, totalSolved, totalProblems, weakTopics, pace,
+    corePct, skillPct, resumePct, companies
+  };
 
   return (
     <div
@@ -3222,7 +3384,12 @@ export default function PlacementPrepView() {
         .pp-tab { animation: fadeUp .25s ease forwards; }
         * { box-sizing: border-box; }
         input, select, button { font-family: inherit; }
+        .ai-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(91, 141, 239, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(91, 141, 239, 0); } 100% { box-shadow: 0 0 0 0 rgba(91, 141, 239, 0); } }
       `}</style>
+
+      {/* NEW: AI Panel */}
+      <SmartAnalysisPanel isOpen={showAI} onClose={() => setShowAI(false)} data={aiData} />
 
       <div style={{ padding: "20px 16px 0" }}>
         <div
@@ -3270,21 +3437,28 @@ export default function PlacementPrepView() {
               </span>
             </div>
           </div>
-          <div style={{ textAlign: "center", flexShrink: 0 }}>
-            <ProgressRing pct={overallPct} size={64} color={readiness.color} />
-            <div
-              style={{
-                fontSize: 8,
-                fontWeight: 800,
-                color: "var(--txt3)",
-                marginTop: 4,
-                letterSpacing: ".08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Readiness
+          
+          {/* NEW: AI Button */}
+          <button 
+            onClick={() => setShowAI(true)}
+            className="ai-pulse"
+            style={{
+              background: "linear-gradient(135deg, #2a2a2a 0%, #000 100%)",
+              border: "1px solid #333",
+              color: "white",
+              padding: "8px 16px",
+              borderRadius: 20,
+              display: "flex", alignItems: "center", gap: 8,
+              cursor: "pointer",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
+            }}
+          >
+            <span style={{ fontSize: 16 }}>✨</span>
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#a5b4fc" }}>AI Insight</div>
+              <div style={{ fontSize: 9, color: "#cbd5e1" }}>Get Daily Plan</div>
             </div>
-          </div>
+          </button>
         </div>
 
         <div
