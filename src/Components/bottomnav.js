@@ -110,73 +110,8 @@ const PRIMARY = [
 ];
 
 const MORE_ITEMS = [
-  {
-    id: "exams",
-    label: "Exam Countdown",
-    desc: "Track upcoming exams",
-    color: "#e05252",
-    bg: "#e0525215",
-    icon: (
-      <svg
-        width="17"
-        height="17"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 20h9" />
-        <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-      </svg>
-    ),
-  },
-  // {
-  //   id: "attendance",
-  //   label: "Attendance",
-  //   desc: "Bunk calc & tracker",
-  //   color: "#4caf7d",
-  //   bg: "#4caf7d15",
-  //   icon: (
-  //     <svg
-  //       width="17"
-  //       height="17"
-  //       viewBox="0 0 24 24"
-  //       fill="none"
-  //       stroke="currentColor"
-  //       strokeWidth="2"
-  //       strokeLinecap="round"
-  //       strokeLinejoin="round"
-  //     >
-  //       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-  //       <circle cx="9" cy="7" r="4" />
-  //       <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-  //     </svg>
-  //   ),
-  // },
-
-  // {
-  //   id: "progress",
-  //   label: "Analytics",
-  //   desc: "Progress & insights",
-  //   color: "#9b72cf",
-  //   bg: "#9b72cf15",
-  //   icon: (
-  //     <svg
-  //       width="17"
-  //       height="17"
-  //       viewBox="0 0 24 24"
-  //       fill="none"
-  //       stroke="currentColor"
-  //       strokeWidth="2"
-  //       strokeLinecap="round"
-  //       strokeLinejoin="round"
-  //     >
-  //       <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-  //     </svg>
-  //   ),
-  // },
+ 
+  
 ];
 
 const TYPE_CONFIG = {
