@@ -1,13 +1,12 @@
 // src/app/page.js — updated with NotificationBanner
 "use client";
 import { AppProvider, useApp } from "@/Components/store";
-import Sidebar from "@/Components/sidebar";
-import BottomNav from "@/Components/bottomnav";
+import Sidebar from "@/Components/Navigations/sidebar";
+import BottomNav from "@/Components/Navigations/bottomnav";
 import SettingsView from "@/Components/settingView";
-import HabitView from "@/Components/Heatmap";
-import PlacementPrepView from "@/Components/Placementprepview";
+import HabitView from "@/Components/Heatmap/Heatmap";
 import NotificationBanner from "@/Components/Notificationbanner";
-
+import PlacementIntelligencePlatform from "@/Components/Placement/Placementintelligence";
 function App() {
   const { view } = useApp();
   return (
@@ -17,7 +16,7 @@ function App() {
         <NotificationBanner />
         {view === "heatmap" && <HabitView />}
         {view === "settings" && <SettingsView />}
-        {view === "placement" && <PlacementPrepView />}
+        {view === "placement" && <PlacementIntelligencePlatform />}
       </div>
       <BottomNav />
     </div>
