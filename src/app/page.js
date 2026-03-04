@@ -1,9 +1,9 @@
 // src/app/page.js — updated with NotificationBanner
 "use client";
-import { AppProvider, useApp } from "@/Components/store";
+import { AppProvider, useApp } from "@/lib/data/store";
 import Sidebar from "@/Components/Navigations/sidebar";
 import BottomNav from "@/Components/Navigations/bottomnav";
-import SettingsView from "@/Components/settingView";
+import SettingsView from "@/Components/Setting/settingView";
 import HabitView from "@/Components/Heatmap/Heatmap";
 import NotificationBanner from "@/Components/Notification/Notificationbanner";
 import PlacementIntelligencePlatform from "@/Components/Placement/Placementintelligence";

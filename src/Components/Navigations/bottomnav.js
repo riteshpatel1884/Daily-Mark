@@ -1,5 +1,5 @@
 "use client";
-import { useApp } from "@/Components/store";
+import { useApp } from "@/lib/data/store";
 import { useState, useEffect, useRef } from "react";
 
 const NOTIF_KEY = "app_notifications";
@@ -109,10 +109,7 @@ const PRIMARY = [
   },
 ];
 
-const MORE_ITEMS = [
- 
-  
-];
+const MORE_ITEMS = [];
 
 const TYPE_CONFIG = {
   info: {

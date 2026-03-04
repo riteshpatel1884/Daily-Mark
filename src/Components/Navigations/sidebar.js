@@ -1,5 +1,5 @@
 "use client";
-import { useApp } from "@/Components/store";
+import { useApp } from "@/lib/data/store";
 import { useState, useEffect, useRef } from "react";
 
 // ── SHARED avatar color palette ──
@@ -151,7 +151,7 @@ const ITEMS = [
       </svg>
     ),
   },
- 
+
   {
     id: "settings",
     label: "Settings",

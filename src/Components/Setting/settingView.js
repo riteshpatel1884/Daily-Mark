@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useApp } from "@/Components/store";
+import { useApp } from "@/lib/data/store";
 
 // ── Credit Constants (must match Aiplannerview.js) ────────────────────────────
 const TOTAL_CREDITS = 5;
@@ -102,7 +102,6 @@ function Avatar({ name, size = 64 }) {
     </div>
   );
 }
-
 
 // function AICreditsSection() {
 //   const [creditsUsed, setCreditsUsed] = useState(0);
