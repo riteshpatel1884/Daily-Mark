@@ -1,4 +1,4 @@
-// pip.Dashboard.jsx — Main prep dashboard (with Reminders, Guide, Timeline tabs)
+// pip.Dashboard.jsx — Main prep dashboard
 
 "use client";
 import { useState, useEffect } from "react";
@@ -6,7 +6,6 @@ import { COMPANIES } from "./constants";
 import { load, save } from "./store.js";
 import { Bar, Tag, Card, SectionLabel, CompanyLogo } from "./ui.js";
 import PlanTab from "./plantab";
-
 import RoundsTab from "./roundstab";
 import AnalyticsTab from "./analyticstab";
 import SmartReminders from "./smartreminders";
@@ -29,11 +28,14 @@ const TABS = [
 export default function Dashboard({ setup, onReset }) {
   const co = COMPANIES[setup.company];
   const dl = daysLeft(setup.date);
-  const questionsPerDay = Math.max(
+
+  // questionsPerDay is now computed inside PlanTab based on actual pool size.
+  // We keep a simple estimate here only for the legacy Analytics/Reminders tabs.
+  const legacyQpd = Math.max(
     2,
     Math.min(8, Math.round(Math.max(30, dl * 3.5) / Math.max(dl, 1))),
   );
-  const totalTarget = questionsPerDay * dl;
+  const totalTarget = legacyQpd * dl;
 
   const solvedKey = "pip_solved_" + setup.company;
   const [solved, setSolved] = useState(() => load(solvedKey, {}));
@@ -43,9 +45,10 @@ export default function Dashboard({ setup, onReset }) {
     save(solvedKey, solved);
   }, [solved, solvedKey]);
 
-  const dsaSolved = Object.entries(solved)
-    .filter(([k]) => !k.startsWith("__q_"))
-    .reduce((s, [, v]) => s + (v || 0), 0);
+  // Count only __q_ prefixed keys as "solved questions" for readiness score
+  const dsaSolved = Object.entries(solved).filter(
+    ([k]) => k.startsWith("__q_") && solved[k],
+  ).length;
 
   const readiness = Math.min(
     100,
@@ -57,14 +60,21 @@ export default function Dashboard({ setup, onReset }) {
     ),
   );
 
+  // Readiness from actual questions solved (used for OA chance)
+  const qSolvedCount = Object.keys(solved).filter(
+    (k) => k.startsWith("__q_") && solved[k],
+  ).length;
   const urgency = dl <= 7 ? "#e05252" : dl <= 14 ? "#e8924a" : "#4caf7d";
   const oaPct = Math.min(
     95,
-    Math.round(readiness * 0.7 + Math.min(dsaSolved, 30) * 0.5),
+    Math.round(
+      Math.min(qSolvedCount * 2, 60) +
+        Math.min(dl > 0 ? (30 - dl) * 0.5 : 15, 35),
+    ),
   );
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
       {/* ── Header ── */}
       <div
         style={{
@@ -125,7 +135,7 @@ export default function Dashboard({ setup, onReset }) {
         {[
           { label: "Days Left", value: dl, color: urgency },
           { label: "Readiness", value: readiness + "%", color: co.color },
-          { label: "DSA Solved", value: dsaSolved, color: "#9b72cf" },
+          { label: "DSA Solved", value: qSolvedCount, color: "#9b72cf" },
           {
             label: "OA Chance",
             value: `~${oaPct}%`,
@@ -204,7 +214,7 @@ export default function Dashboard({ setup, onReset }) {
         </div>
       </Card>
 
-      {/* ── Tab bar (horizontally scrollable) ── */}
+      {/* ── Tab bar ── */}
       <div
         style={{
           display: "flex",
@@ -244,13 +254,11 @@ export default function Dashboard({ setup, onReset }) {
         <PlanTab
           co={co}
           daysLeft={dl}
-          questionsPerDay={questionsPerDay}
-          totalTarget={totalTarget}
+          setup={setup}
           solved={solved}
           setSolved={setSolved}
         />
       )}
-  
       {activeTab === "rounds" && <RoundsTab co={co} company={setup.company} />}
       {activeTab === "analytics" && (
         <AnalyticsTab

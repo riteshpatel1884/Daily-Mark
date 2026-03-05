@@ -13,7 +13,7 @@ import {
   getQuestionsForCompany,
   groupByPattern,
   sortByFrequency,
-} from "./QuestionDatabase/Questions.js";
+} from "./QuestionDatabase/Questions.js"
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const DIFF_COLOR = { Easy: "#4caf7d", Medium: "#d4b44a", Hard: "#e05252" };
@@ -346,14 +346,7 @@ function AddRow({ q, onAdd, accent }) {
 }
 
 // ─── Main PlanTab ─────────────────────────────────────────────────────────────
-export default function PlanTab({
-  co,
-  daysLeft,
-  questionsPerDay,
-  setup,
-  solved,
-  setSolved,
-}) {
+export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
   const accent = co?.color || "#5b8def";
   const company = setup?.company || "";
 
@@ -451,15 +444,23 @@ export default function PlanTab({
     [tier1, tier2Accepted, tier3Added],
   );
 
-  // ── Today: pick questionsPerDay from active pool by cycling with day index ──
+  // ── questionsPerDay: total pool / days left, clamped 2-10 ──
+  const questionsPerDay = useMemo(() => {
+    if (!daysLeft || daysLeft <= 0 || !activePool.length)
+      return Math.min(activePool.length, 5);
+    return Math.max(2, Math.min(10, Math.ceil(activePool.length / daysLeft)));
+  }, [activePool.length, daysLeft]);
+
+  // ── Today: pick questionsPerDay questions cycling through active pool ──
   const todayStr = new Date().toISOString().split("T")[0];
   const dayIndex = useMemo(() => Math.floor(Date.now() / 86400000), []);
 
   const todayQs = useMemo(() => {
-    if (!activePool.length || !questionsPerDay) return [];
-    const start = (dayIndex * questionsPerDay) % activePool.length;
+    if (!activePool.length) return [];
+    const qpd = Math.max(1, questionsPerDay);
+    const start = (dayIndex * qpd) % activePool.length;
     const result = [];
-    for (let i = 0; i < questionsPerDay; i++) {
+    for (let i = 0; i < qpd; i++) {
       result.push(activePool[(start + i) % activePool.length]);
     }
     return result;
@@ -533,8 +534,8 @@ export default function PlanTab({
           {[
             { label: "In Pool", value: activePool.length, icon: "📚" },
             { label: "Solved", value: totalSolved, icon: "✅" },
-            { label: "Per Day", value: questionsPerDay, icon: "📋" },
-            { label: "Overall", value: overallPct + "%", icon: "📈" },
+            { label: "Per Day", value: questionsPerDay + " Qs", icon: "📋" },
+            { label: "Days Left", value: daysLeft, icon: "⏳" },
           ].map((s) => (
             <div
               key={s.label}
