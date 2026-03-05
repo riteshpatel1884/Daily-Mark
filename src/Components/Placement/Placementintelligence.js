@@ -1,30 +1,18 @@
-// PlacementIntelligencePlatform.jsx — Main entry point
-// Wires together all feature modules:
-//
-//   pip.constants.js        — Company data, seed experiences, keys
-//   pip.store.js            — localStorage helpers + useExperiences hook
-//   pip.ui.jsx              — Shared primitive components (Bar, Tag, Card…)
-//   pip.SetupView.jsx       — Company/role/date entry screen
-//   pip.Dashboard.jsx       — Main prep dashboard (tabs: Plan, Questions, Rounds, Analytics)
-//   pip.PlanTab.jsx         — Smart daily plan + topic tracker
-//   pip.QuestionsTab.jsx    — Topic frequency + hot questions
-//   pip.RoundsTab.jsx       — Round structure + company stats + per-company feed
-//   pip.AnalyticsTab.jsx    — Performance analytics + prediction engine
-//   pip.ExperienceFeed.jsx  — Global filterable feed + submit form
-//   pip.CompanyDatabase.jsx — Browse all companies
-
 "use client";
 import { useState, useEffect } from "react";
-import { COMPANIES,SETUP_KEY } from "./constants";
-import { load,save } from "./store";
+import { SETUP_KEY } from "./constants";
+import { load, save } from "./store.js";
 import SetupView from "./setupview";
 import Dashboard from "./dashboard";
 import ExperienceFeed from "./experiencefeed";
 import CompanyDatabase from "./companydatabase";
-
+import InterviewCalendar from "./interviewcalendar";
+import Leaderboard from "./leaderboard";
 const NAV_TABS = [
-  { id: "dashboard", label: "📊 Dashboard" },
+  { id: "dashboard", label: "📊 Prep" },
   { id: "companies", label: "🏢 Companies" },
+  { id: "calendar", label: "📅 Calendar" },
+  { id: "leaderboard", label: "🏆 Ranks" },
   { id: "feed", label: "💬 Experiences" },
 ];
 
@@ -46,7 +34,6 @@ export default function PlacementIntelligencePlatform() {
   }
 
   function handleSelectCompany(name) {
-    // Auto-fill 30 days from today as default date when browsing from Companies tab
     const defaultDate = new Date();
     defaultDate.setDate(defaultDate.getDate() + 30);
     setSetup((prev) => ({
@@ -58,9 +45,9 @@ export default function PlacementIntelligencePlatform() {
   }
 
   return (
-    <div className="page" style={{ paddingBottom: 32 }}>
-      {/* ── Page header ── */}
-      <div style={{ marginBottom: 20 }}>
+    <div className="page" style={{ paddingBottom: 40 }}>
+      {/* ── Header ── */}
+      <div style={{ marginBottom: 18 }}>
         <h1
           style={{
             fontSize: 22,
@@ -73,19 +60,20 @@ export default function PlacementIntelligencePlatform() {
           Placement Intel <span style={{ color: "#5b8def" }}>⚡</span>
         </h1>
         <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 3 }}>
-          Data-driven interview preparation
+          Your placement operating system
         </div>
       </div>
 
-      {/* ── Tab navigation ── */}
+      {/* ── Top-level nav ── */}
       <div
         style={{
           display: "flex",
           gap: 5,
           marginBottom: 20,
-          background: "var(--bg3)",
-          borderRadius: 12,
-          padding: 4,
+          overflowX: "auto",
+          paddingBottom: 2,
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
         }}
       >
         {NAV_TABS.map((t) => (
@@ -93,17 +81,17 @@ export default function PlacementIntelligencePlatform() {
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              flex: 1,
-              padding: "9px 4px",
-              borderRadius: 9,
-              border: "none",
-              background: tab === t.id ? "var(--bg)" : "transparent",
-              color: tab === t.id ? "var(--txt)" : "var(--txt3)",
+              flexShrink: 0,
+              padding: "9px 14px",
+              borderRadius: 99,
+              border: `1.5px solid ${tab === t.id ? "#5b8def" : "var(--border)"}`,
+              background: tab === t.id ? "#5b8def18" : "var(--bg3)",
+              color: tab === t.id ? "#5b8def" : "var(--txt3)",
               fontSize: 12,
               fontWeight: 700,
               cursor: "pointer",
               transition: "all .15s",
-              boxShadow: tab === t.id ? "0 1px 4px rgba(0,0,0,.12)" : "none",
+              whiteSpace: "nowrap",
             }}
           >
             {t.label}
@@ -111,8 +99,7 @@ export default function PlacementIntelligencePlatform() {
         ))}
       </div>
 
-      {/* ── Tab content ── */}
-
+      {/* ── Content ── */}
       {tab === "dashboard" &&
         (setup ? (
           <Dashboard setup={setup} onReset={handleReset} />
@@ -123,6 +110,10 @@ export default function PlacementIntelligencePlatform() {
       {tab === "companies" && (
         <CompanyDatabase onSelectCompany={handleSelectCompany} />
       )}
+
+      {tab === "calendar" && <InterviewCalendar />}
+
+      {tab === "leaderboard" && <Leaderboard setup={setup} />}
 
       {tab === "feed" && <ExperienceFeed />}
     </div>

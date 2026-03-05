@@ -1,7 +1,7 @@
 // pip.AnalyticsTab.jsx — Performance analytics + Interview Prediction Engine
 
 "use client";
-import { Bar,Card,SectionLabel,tag } from "./ui.js";
+import { Bar, Card, SectionLabel, Tag } from "./ui.js";
 
 export default function AnalyticsTab({
   co,

@@ -1,4 +1,3 @@
-
 // pip.QuestionsTab.jsx — Topic frequency chart + high-frequency questions
 
 "use client";
@@ -22,7 +21,9 @@ export default function QuestionsTab({ co, solved, setSolved }) {
                 marginBottom: 5,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--txt)" }}>
+              <span
+                style={{ fontSize: 13, fontWeight: 700, color: "var(--txt)" }}
+              >
                 {topic}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -37,7 +38,9 @@ export default function QuestionsTab({ co, solved, setSolved }) {
                   {weight}%
                 </span>
                 {weight >= 25 && <Tag color="#e05252">🔥 Hot</Tag>}
-                {weight >= 15 && weight < 25 && <Tag color="#e8924a">⚡ High</Tag>}
+                {weight >= 15 && weight < 25 && (
+                  <Tag color="#e8924a">⚡ High</Tag>
+                )}
               </div>
             </div>
             <Bar pct={weight} color={co.color} height={7} />
@@ -48,8 +51,16 @@ export default function QuestionsTab({ co, solved, setSolved }) {
       {/* High Frequency Questions */}
       <Card>
         <SectionLabel>High Frequency Questions 🔥</SectionLabel>
-        <p style={{ fontSize: 12, color: "var(--txt3)", margin: "0 0 14px", lineHeight: 1.5 }}>
-          Most commonly asked questions based on interview experiences. Mark them as done to track progress.
+        <p
+          style={{
+            fontSize: 12,
+            color: "var(--txt3)",
+            margin: "0 0 14px",
+            lineHeight: 1.5,
+          }}
+        >
+          Most commonly asked questions based on interview experiences. Mark
+          them as done to track progress.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {co.hotQs.map((q, i) => {
@@ -100,8 +111,16 @@ export default function QuestionsTab({ co, solved, setSolved }) {
                   >
                     {q}
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--txt3)", marginTop: 2 }}>
-                    {i < 2 ? "🔥 Very High" : i < 4 ? "⚡ High" : i < 6 ? "📌 Medium" : "💡 Worth knowing"}{" "}
+                  <div
+                    style={{ fontSize: 10, color: "var(--txt3)", marginTop: 2 }}
+                  >
+                    {i < 2
+                      ? "🔥 Very High"
+                      : i < 4
+                        ? "⚡ High"
+                        : i < 6
+                          ? "📌 Medium"
+                          : "💡 Worth knowing"}{" "}
                     frequency
                   </div>
                 </div>
@@ -143,9 +162,12 @@ export default function QuestionsTab({ co, solved, setSolved }) {
             justifyContent: "space-between",
           }}
         >
-          <span style={{ fontSize: 12, color: "var(--txt2)" }}>Hot questions done</span>
+          <span style={{ fontSize: 12, color: "var(--txt2)" }}>
+            Hot questions done
+          </span>
           <span style={{ fontSize: 14, fontWeight: 800, color: co.color }}>
-            {co.hotQs.filter((_, i) => (solved["__q_" + i] || 0) > 0).length}/{co.hotQs.length}
+            {co.hotQs.filter((_, i) => (solved["__q_" + i] || 0) > 0).length}/
+            {co.hotQs.length}
           </span>
         </div>
       </Card>

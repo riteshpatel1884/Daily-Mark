@@ -1,7 +1,7 @@
 // pip.PlanTab.jsx — Smart daily plan + topic progress tracker tab
 
 "use client";
-import { Bar, Card, SectionLabel, Tag } from "./ui";
+import { Bar, Card, SectionLabel, Tag } from "./ui.js";
 
 export default function PlanTab({
   co,

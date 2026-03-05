@@ -1,7 +1,7 @@
 // pip.store.js — localStorage helpers + experiences state management
 
 import { useState, useEffect, useCallback } from "react";
-import { EXPERIENCES_KEY,SEED_EXPERIENCES } from "./constants";
+import { EXPERIENCES_KEY, SEED_EXPERIENCES } from "./constants";
 
 export function load(key, def) {
   try {

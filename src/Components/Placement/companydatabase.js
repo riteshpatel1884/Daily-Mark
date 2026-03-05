@@ -1,8 +1,9 @@
 // pip.CompanyDatabase.jsx — Browse all companies with stats
 
 "use client";
-import { COMPANIES } from "./constants.js";
-import { Card,SectionLabel,Tag,CompanyLogo, Bar } from "./ui.js";
+import { COMPANIES } from "./constants";
+import { Card, SectionLabel, Tag, CompanyLogo, Bar } from "./ui";
+
 export default function CompanyDatabase({ onSelectCompany }) {
   return (
     <div>

@@ -1,37 +1,40 @@
-// pip.Dashboard.jsx — Main prep dashboard after setup
+// pip.Dashboard.jsx — Main prep dashboard (with Reminders, Guide, Timeline tabs)
 
 "use client";
 import { useState, useEffect } from "react";
 import { COMPANIES } from "./constants";
-import { load,save } from "./store";
-import { Bar,Tag,Card,SectionLabel,CompanyLogo } from "./ui.js";
+import { load, save } from "./store.js";
+import { Bar, Tag, Card, SectionLabel, CompanyLogo } from "./ui.js";
 import PlanTab from "./plantab";
 import QuestionsTab from "./questionstab";
 import RoundsTab from "./roundstab";
 import AnalyticsTab from "./analyticstab";
+import SmartReminders from "./smartreminders";
+import SurvivalGuide from "./survivalguide";
+import PrepTimeline from "./preptimeline";
 
-function days(d) {
-  return Math.max(0, Math.ceil((new Date(d) - Date.now()) / 86400000));
+function daysLeft(date) {
+  return Math.max(0, Math.ceil((new Date(date) - Date.now()) / 86400000));
 }
 
 const TABS = [
   { id: "plan", label: "📋 Plan" },
-  { id: "questions", label: "🔥 Questions" },
+  { id: "questions", label: "🔥 Qs" },
   { id: "rounds", label: "🎯 Rounds" },
-  { id: "analytics", label: "📊 Analytics" },
+  { id: "analytics", label: "📊 Stats" },
+  { id: "timeline", label: "🗓 Timeline" },
+  { id: "guide", label: "🧭 Guide" },
+  { id: "reminders", label: "⚠ Pace" },
 ];
 
 export default function Dashboard({ setup, onReset }) {
   const co = COMPANIES[setup.company];
-  const daysLeft = days(setup.date);
+  const dl = daysLeft(setup.date);
   const questionsPerDay = Math.max(
     2,
-    Math.min(
-      8,
-      Math.round(Math.max(30, daysLeft * 3.5) / Math.max(daysLeft, 1)),
-    ),
+    Math.min(8, Math.round(Math.max(30, dl * 3.5) / Math.max(dl, 1))),
   );
-  const totalTarget = questionsPerDay * daysLeft;
+  const totalTarget = questionsPerDay * dl;
 
   const solvedKey = "pip_solved_" + setup.company;
   const [solved, setSolved] = useState(() => load(solvedKey, {}));
@@ -50,24 +53,26 @@ export default function Dashboard({ setup, onReset }) {
     Math.round(
       Object.entries(co.topics).reduce((s, [t, w]) => {
         const target = Math.max(1, Math.round(w / 3));
-        const pct = Math.min(1, (solved[t] || 0) / target);
-        return s + pct * w;
+        return s + Math.min(1, (solved[t] || 0) / target) * w;
       }, 0),
     ),
   );
 
-  const urgency =
-    daysLeft <= 7 ? "#e05252" : daysLeft <= 14 ? "#e8924a" : "#4caf7d";
+  const urgency = dl <= 7 ? "#e05252" : dl <= 14 ? "#e8924a" : "#4caf7d";
+  const oaPct = Math.min(
+    95,
+    Math.round(readiness * 0.7 + Math.min(dsaSolved, 30) * 0.5),
+  );
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
-      {/* Header */}
+      {/* ── Header ── */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 20,
+          marginBottom: 16,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -87,7 +92,7 @@ export default function Dashboard({ setup, onReset }) {
             <div style={{ fontSize: 12, color: "var(--txt3)" }}>
               {setup.role} ·{" "}
               <span style={{ color: urgency, fontWeight: 700 }}>
-                {daysLeft} days left
+                {dl} days left
               </span>
             </div>
           </div>
@@ -109,27 +114,32 @@ export default function Dashboard({ setup, onReset }) {
         </button>
       </div>
 
-      {/* Stats row */}
+      {/* ── 4-stat row ── */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3,1fr)",
-          gap: 10,
-          marginBottom: 16,
+          gridTemplateColumns: "repeat(4,1fr)",
+          gap: 8,
+          marginBottom: 14,
         }}
       >
         {[
-          { label: "Days Left", value: daysLeft, color: urgency },
+          { label: "Days Left", value: dl, color: urgency },
           { label: "Readiness", value: readiness + "%", color: co.color },
           { label: "DSA Solved", value: dsaSolved, color: "#9b72cf" },
+          {
+            label: "OA Chance",
+            value: `~${oaPct}%`,
+            color: oaPct > 65 ? "#4caf7d" : oaPct > 40 ? "#d4b44a" : "#e05252",
+          },
         ].map((s) => (
           <Card
             key={s.label}
-            style={{ padding: "14px 12px", textAlign: "center" }}
+            style={{ padding: "12px 6px", textAlign: "center" }}
           >
             <div
               style={{
-                fontSize: 26,
+                fontSize: 19,
                 fontWeight: 900,
                 color: s.color,
                 letterSpacing: "-.02em",
@@ -140,7 +150,7 @@ export default function Dashboard({ setup, onReset }) {
             </div>
             <div
               style={{
-                fontSize: 10,
+                fontSize: 9,
                 color: "var(--txt3)",
                 marginTop: 4,
                 fontWeight: 700,
@@ -154,20 +164,20 @@ export default function Dashboard({ setup, onReset }) {
         ))}
       </div>
 
-      {/* Readiness bar */}
-      <Card style={{ marginBottom: 16, padding: "14px 16px" }}>
+      {/* ── Readiness bar ── */}
+      <Card style={{ marginBottom: 14, padding: "12px 16px" }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 8,
+            marginBottom: 7,
           }}
         >
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--txt)" }}>
             {setup.company} Readiness Score
           </span>
-          <span style={{ fontSize: 22, fontWeight: 900, color: co.color }}>
+          <span style={{ fontSize: 20, fontWeight: 900, color: co.color }}>
             {readiness}
             <span style={{ fontSize: 12, color: "var(--txt3)" }}>/100</span>
           </span>
@@ -177,9 +187,12 @@ export default function Dashboard({ setup, onReset }) {
           style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}
         >
           {Object.entries(co.topics).map(([t, w]) => {
-            const done = solved[t] || 0;
-            const target = Math.round(w / 3);
-            const pct = Math.min(100, Math.round((done / target) * 100));
+            const pct = Math.min(
+              100,
+              Math.round(
+                ((solved[t] || 0) / Math.max(1, Math.round(w / 3))) * 100,
+              ),
+            );
             const color =
               pct < 40 ? "#e05252" : pct > 70 ? "#4caf7d" : "#d4b44a";
             return (
@@ -192,15 +205,16 @@ export default function Dashboard({ setup, onReset }) {
         </div>
       </Card>
 
-      {/* Tabs */}
+      {/* ── Tab bar (horizontally scrollable) ── */}
       <div
         style={{
           display: "flex",
           gap: 5,
           marginBottom: 16,
-          background: "var(--bg3)",
-          borderRadius: 12,
-          padding: 4,
+          overflowX: "auto",
+          paddingBottom: 2,
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
         }}
       >
         {TABS.map((t) => (
@@ -208,18 +222,16 @@ export default function Dashboard({ setup, onReset }) {
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             style={{
-              flex: 1,
-              padding: "8px 4px",
-              borderRadius: 9,
-              border: "none",
-              background: activeTab === t.id ? "var(--bg)" : "transparent",
-              color: activeTab === t.id ? "var(--txt)" : "var(--txt3)",
+              flexShrink: 0,
+              padding: "8px 12px",
+              borderRadius: 99,
+              border: `1.5px solid ${activeTab === t.id ? co.color : "var(--border)"}`,
+              background: activeTab === t.id ? co.color + "18" : "var(--bg3)",
+              color: activeTab === t.id ? co.color : "var(--txt3)",
               fontSize: 11,
               fontWeight: 700,
               cursor: "pointer",
               transition: "all .15s",
-              boxShadow:
-                activeTab === t.id ? "0 1px 4px rgba(0,0,0,.15)" : "none",
               whiteSpace: "nowrap",
             }}
           >
@@ -228,11 +240,11 @@ export default function Dashboard({ setup, onReset }) {
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* ── Tab content ── */}
       {activeTab === "plan" && (
         <PlanTab
           co={co}
-          daysLeft={daysLeft}
+          daysLeft={dl}
           questionsPerDay={questionsPerDay}
           totalTarget={totalTarget}
           solved={solved}
@@ -247,10 +259,15 @@ export default function Dashboard({ setup, onReset }) {
         <AnalyticsTab
           co={co}
           solved={solved}
-          daysLeft={daysLeft}
+          daysLeft={dl}
           totalTarget={totalTarget}
           company={setup.company}
         />
+      )}
+      {activeTab === "timeline" && <PrepTimeline setup={setup} co={co} />}
+      {activeTab === "guide" && <SurvivalGuide company={setup.company} />}
+      {activeTab === "reminders" && (
+        <SmartReminders setup={setup} solved={solved} co={co} />
       )}
     </div>
   );

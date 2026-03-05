@@ -2,8 +2,8 @@
 
 "use client";
 import { useState } from "react";
-import { COMPANIES,ROLES } from "./constants.js";
-import { Card,SectionLabel } from "./ui.js";
+import { COMPANIES, ROLES } from "./constants";
+import { Card, SectionLabel } from "./ui.js";
 
 export default function SetupView({ onSubmit }) {
   const [company, setCompany] = useState("Amazon");

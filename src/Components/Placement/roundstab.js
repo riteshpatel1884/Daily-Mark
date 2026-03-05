@@ -1,9 +1,14 @@
 // pip.RoundsTab.jsx — Round structure, company stats, experience feed per company
 
 "use client";
-import { Card,SectionLabel,Tag,DifficultyTag,CompanyLogo } from "./ui.js";
+import {
+  Card,
+  SectionLabel,
+  Tag,
+  DifficultyTag,
+  CompanyLogo,
+} from "./ui.js";
 import { useExperiences } from "./store.js";
-
 
 export default function RoundsTab({ co, company }) {
   const { allExps } = useExperiences();

@@ -10,8 +10,9 @@ import {
   DifficultyTag,
   CompanyLogo,
   INP_STYLE,
-} from "./ui";
+} from "./ui.js";
 import { useExperiences } from "./store";
+
 // ── Submit Experience Form ────────────────────────────────────────────────────
 function SubmitForm({ onClose, onSubmitted }) {
   const { addExperience } = useExperiences();
