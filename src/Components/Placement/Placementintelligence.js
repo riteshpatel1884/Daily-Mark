@@ -5,15 +5,13 @@ import { load, save } from "./store.js";
 import SetupView from "./setupview";
 import Dashboard from "./dashboard";
 import ExperienceFeed from "./experiencefeed";
-import CompanyDatabase from "./companydatabase";
 import InterviewCalendar from "./interviewcalendar";
 import Leaderboard from "./leaderboard";
 const NAV_TABS = [
-  { id: "dashboard", label: "📊 Prep" },
-  { id: "companies", label: "🏢 Companies" },
-  { id: "calendar", label: "📅 Calendar" },
-  { id: "leaderboard", label: "🏆 Ranks" },
-  { id: "feed", label: "💬 Experiences" },
+  { id: "dashboard", label: "Prep" },
+  { id: "calendar", label: "Calendar" },
+  { id: "leaderboard", label: "Ranks" },
+  { id: "feed", label: "Experiences" },
 ];
 
 export default function PlacementIntelligencePlatform() {

@@ -11,7 +11,7 @@ const PAGE_SIZE = 10;
 const BASE_URL =
   typeof window !== "undefined"
     ? window.location.origin
-    : "https://leaderlab.in";
+    : "https://leaderlab.app";
 
 // Seed leaderboard data (other students' simulated entries)
 const SEED_LEADERBOARD = [
@@ -480,7 +480,18 @@ export default function Leaderboard({ setup }) {
             padding: "18px 20px",
           }}
         >
-          
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: "var(--txt3)",
+              textTransform: "uppercase",
+              letterSpacing: ".1em",
+              marginBottom: 10,
+            }}
+          >
+            📊 Your Prep Card
+          </div>
           <div
             style={{
               display: "flex",
