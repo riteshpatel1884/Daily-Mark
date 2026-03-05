@@ -6,7 +6,7 @@ import { COMPANIES } from "./constants";
 import { load, save } from "./store.js";
 import { Bar, Tag, Card, SectionLabel, CompanyLogo } from "./ui.js";
 import PlanTab from "./plantab";
-import QuestionsTab from "./questionstab";
+
 import RoundsTab from "./roundstab";
 import AnalyticsTab from "./analyticstab";
 import SmartReminders from "./smartreminders";
@@ -19,7 +19,6 @@ function daysLeft(date) {
 
 const TABS = [
   { id: "plan", label: "📋 Plan" },
-  { id: "questions", label: "🔥 Qs" },
   { id: "rounds", label: "🎯 Rounds" },
   { id: "analytics", label: "📊 Stats" },
   { id: "timeline", label: "🗓 Timeline" },
@@ -251,9 +250,7 @@ export default function Dashboard({ setup, onReset }) {
           setSolved={setSolved}
         />
       )}
-      {activeTab === "questions" && (
-        <QuestionsTab co={co} solved={solved} setSolved={setSolved} />
-      )}
+  
       {activeTab === "rounds" && <RoundsTab co={co} company={setup.company} />}
       {activeTab === "analytics" && (
         <AnalyticsTab
