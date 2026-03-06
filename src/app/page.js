@@ -16,7 +16,7 @@ function App() {
         <NotificationBanner />
         {view === "heatmap" && <HabitView />}
         {view === "settings" && <SettingsView />}
-        {view === "placement" && <PlacementIntelligencePlatform />}
+        {view === "hireLab" && <PlacementIntelligencePlatform />}
       </div>
       <BottomNav />
     </div>

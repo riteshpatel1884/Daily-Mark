@@ -47,8 +47,8 @@ const PRIMARY = [
     ),
   },
   {
-    id: "placement",
-    label: "Placement",
+    id: "hireLab",
+    label: "HireLab",
     icon: (
       <svg
         width="18"

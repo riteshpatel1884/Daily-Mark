@@ -55,10 +55,10 @@ export default function PlacementIntelligencePlatform() {
             letterSpacing: "-.03em",
           }}
         >
-          Placement Intel <span style={{ color: "#5b8def" }}>⚡</span>
+          HireLab
         </h1>
         <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 3 }}>
-          Your placement operating system
+          Experiment. Improve. Get hired.
         </div>
       </div>
 

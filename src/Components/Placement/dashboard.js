@@ -20,11 +20,15 @@ const TABS = [
 ];
 
 export default function Dashboard({ setup, onReset }) {
-  const co = COMPANIES[setup.company];
+  // Guard: co may not exist in COMPANIES (e.g. company added in SetupView not in constants)
+  const co = (COMPANIES && COMPANIES[setup.company]) || {
+    color: "#5b8def",
+    logo: setup.company?.[0] || "?",
+    topics: {},
+  };
+
   const dl = daysLeft(setup.date);
 
-  // questionsPerDay is now computed inside PlanTab based on actual pool size.
-  // We keep a simple estimate here only for the legacy Analytics/Reminders tabs.
   const legacyQpd = Math.max(
     2,
     Math.min(8, Math.round(Math.max(30, dl * 3.5) / Math.max(dl, 1))),
@@ -39,22 +43,23 @@ export default function Dashboard({ setup, onReset }) {
     save(solvedKey, solved);
   }, [solved, solvedKey]);
 
-  // Count only __q_ prefixed keys as "solved questions" for readiness score
   const dsaSolved = Object.entries(solved).filter(
     ([k]) => k.startsWith("__q_") && solved[k],
   ).length;
 
+  // Guard against co.topics being undefined
   const readiness = Math.min(
     100,
     Math.round(
-      Object.entries(co.topics).reduce((s, [t, w]) => {
-        const target = Math.max(1, Math.round(w / 3));
-        return s + Math.min(1, (solved[t] || 0) / target) * w;
-      }, 0),
+      co.topics && Object.keys(co.topics).length > 0
+        ? Object.entries(co.topics).reduce((s, [t, w]) => {
+            const target = Math.max(1, Math.round(w / 3));
+            return s + Math.min(1, (solved[t] || 0) / target) * w;
+          }, 0)
+        : 0,
     ),
   );
 
-  // Readiness from actual questions solved (used for OA chance)
   const qSolvedCount = Object.keys(solved).filter(
     (k) => k.startsWith("__q_") && solved[k],
   ).length;
@@ -117,9 +122,6 @@ export default function Dashboard({ setup, onReset }) {
         </button>
       </div>
 
-  
-
-
       {/* ── Tab bar ── */}
       <div
         style={{
@@ -166,20 +168,7 @@ export default function Dashboard({ setup, onReset }) {
         />
       )}
       {activeTab === "rounds" && <RoundsTab co={co} company={setup.company} />}
-      {activeTab === "analytics" && (
-        <AnalyticsTab
-          co={co}
-          solved={solved}
-          daysLeft={dl}
-          totalTarget={totalTarget}
-          company={setup.company}
-        />
-      )}
-      {activeTab === "timeline" && <PrepTimeline setup={setup} co={co} />}
       {activeTab === "guide" && <SurvivalGuide company={setup.company} />}
-      {activeTab === "reminders" && (
-        <SmartReminders setup={setup} solved={solved} co={co} />
-      )}
     </div>
   );
 }

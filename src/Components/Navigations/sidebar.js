@@ -110,8 +110,8 @@ const ITEMS = [
   //   ),
   // },
   {
-    id: "placement",
-    label: "Placement Prep",
+    id: "hireLab",
+    label: "HireLab",
     icon: (
       <svg
         width="14"
