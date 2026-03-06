@@ -13,7 +13,7 @@ import {
   getQuestionsForCompany,
   groupByPattern,
   sortByFrequency,
-} from "./QuestionDatabase/Questions.js"
+} from "./QuestionDatabase/Questions.js";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const DIFF_COLOR = { Easy: "#4caf7d", Medium: "#d4b44a", Hard: "#e05252" };
@@ -57,49 +57,88 @@ function PatternPill({ pattern }) {
 }
 
 // ─── QuestionRow ──────────────────────────────────────────────────────────────
-function QuestionRow({ q, checked, onCheck, accent, showCompanies = false }) {
+// readOnly=true → used in Patterns section (no checkbox interaction, dimmed if solved)
+function QuestionRow({
+  q,
+  checked,
+  onCheck,
+  accent,
+  showCompanies = false,
+  readOnly = false,
+}) {
   return (
     <div
-      onClick={() => onCheck(q.id)}
+      onClick={readOnly ? undefined : () => onCheck(q.id)}
       style={{
         display: "flex",
         alignItems: "center",
         gap: 10,
         padding: "9px 12px",
         borderRadius: 10,
-        cursor: "pointer",
+        cursor: readOnly ? "default" : "pointer",
         background: checked ? accent + "10" : "var(--bg3)",
         border: `1px solid ${checked ? accent + "44" : "var(--border)"}`,
         transition: "all .15s",
+        opacity: readOnly && checked ? 0.55 : 1,
       }}
     >
-      {/* checkbox */}
-      <div
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: 5,
-          flexShrink: 0,
-          transition: "all .15s",
-          border: `2px solid ${checked ? accent : "var(--border)"}`,
-          background: checked ? accent : "transparent",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {checked && (
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-            <path
-              d="M1 4L3.5 6.5L9 1"
-              stroke="#fff"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
-      </div>
+      {/* checkbox — hidden in readOnly, shown as static indicator */}
+      {!readOnly ? (
+        <div
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 5,
+            flexShrink: 0,
+            transition: "all .15s",
+            border: `2px solid ${checked ? accent : "var(--border)"}`,
+            background: checked ? accent : "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {checked && (
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+              <path
+                d="M1 4L3.5 6.5L9 1"
+                stroke="#fff"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </div>
+      ) : (
+        /* read-only solved indicator */
+        <div
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 5,
+            flexShrink: 0,
+            border: `2px solid ${checked ? accent + "88" : "var(--border)"}`,
+            background: checked ? accent + "22" : "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {checked && (
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+              <path
+                d="M1 4L3.5 6.5L9 1"
+                stroke={accent}
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity="0.7"
+              />
+            </svg>
+          )}
+        </div>
+      )}
 
       {/* body */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -155,6 +194,21 @@ function QuestionRow({ q, checked, onCheck, accent, showCompanies = false }) {
             </span>
           )}
         </div>
+
+        {/* read-only hint */}
+        {readOnly && checked && (
+          <div
+            style={{
+              fontSize: 9,
+              color: accent,
+              marginTop: 3,
+              fontWeight: 700,
+              opacity: 0.7,
+            }}
+          >
+            ✓ marked done in Today
+          </div>
+        )}
       </div>
 
       {/* LC link */}
@@ -484,12 +538,26 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
   // ── UI state ──
   const [view, setView] = useState("today");
   const [patternFilter, setPatternFilter] = useState("All");
+  // "all" | "company" | "others"
+  const [companyFilter, setCompanyFilter] = useState("all");
   const [showTier2, setShowTier2] = useState(true);
   const [addSearch, setAddSearch] = useState("");
   const [addPatFilter, setAddPatFilter] = useState("All");
 
+  // ── Filtered active pool for Patterns view (by company ownership) ──
+  const patternViewPool = useMemo(() => {
+    if (companyFilter === "company")
+      return activePool.filter((q) => tier1Ids.has(q.id));
+    if (companyFilter === "others")
+      return activePool.filter((q) => !tier1Ids.has(q.id));
+    return activePool;
+  }, [activePool, companyFilter, tier1Ids]);
+
   // pattern groups for active pool
-  const patternGroups = useMemo(() => groupByPattern(activePool), [activePool]);
+  const patternGroups = useMemo(
+    () => groupByPattern(patternViewPool),
+    [patternViewPool],
+  );
   const allPatterns = useMemo(
     () => ["All", ...Object.keys(patternGroups).sort()],
     [patternGroups],
@@ -683,13 +751,60 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
               </div>
             ) : (
               todayQs.map((q) => (
-                <QuestionRow
+                <div
                   key={q.id}
-                  q={q}
-                  checked={!!solved[`__q_${q.id}`]}
-                  onCheck={toggleQ}
-                  accent={accent}
-                />
+                  style={{ display: "flex", flexDirection: "column", gap: 5 }}
+                >
+                  {/* ── Tags row (pattern pill + topic + companies) ── */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      flexWrap: "wrap",
+                      paddingLeft: 2,
+                    }}
+                  >
+                    {/* Pattern pill (filled / accent-tinted) */}
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 800,
+                        padding: "2px 8px",
+                        borderRadius: 99,
+                        background: accent + "22",
+                        color: accent,
+                        border: `1px solid ${accent}44`,
+                      }}
+                    >
+                      {q.pattern}
+                    </span>
+                    {/* Topic */}
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        color: "var(--txt3)",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      {q.topic}
+                    </span>
+                    {/* Companies */}
+                    {q.companies && q.companies.length > 0 && (
+                      <span style={{ fontSize: 9, color: "var(--txt3)" }}>
+                        {q.companies.slice(0, 4).join(" · ")}
+                      </span>
+                    )}
+                  </div>
+
+                  <QuestionRow
+                    q={q}
+                    checked={!!solved[`__q_${q.id}`]}
+                    onCheck={toggleQ}
+                    accent={accent}
+                  />
+                </div>
               ))
             )}
           </div>
@@ -757,6 +872,49 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             </span>
           </div>
 
+          {/* ── Company filter ── */}
+          <div
+            style={{
+              display: "flex",
+              gap: 5,
+              background: "var(--bg3)",
+              borderRadius: 12,
+              padding: 4,
+              border: "1px solid var(--border)",
+            }}
+          >
+            {[
+              { id: "all", label: "All Questions" },
+              { id: "company", label: `🏢 ${company || "Company"} Only` },
+              { id: "others", label: "🌐 Other Companies" },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => {
+                  setCompanyFilter(opt.id);
+                  setPatternFilter("All");
+                }}
+                style={{
+                  flex: 1,
+                  padding: "6px 4px",
+                  borderRadius: 9,
+                  cursor: "pointer",
+                  border: "none",
+                  background: companyFilter === opt.id ? accent : "transparent",
+                  color: companyFilter === opt.id ? "#fff" : "var(--txt3)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  transition: "all .15s",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {/* pattern filter chips */}
           <div
             style={{
@@ -768,7 +926,7 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             }}
           >
             {allPatterns.map((p) => {
-              const qs = p === "All" ? activePool : patternGroups[p] || [];
+              const qs = p === "All" ? patternViewPool : patternGroups[p] || [];
               const done = qs.filter((q) => solved[`__q_${q.id}`]).length;
               return (
                 <button
@@ -794,7 +952,7 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             })}
           </div>
 
-          {activePool.length === 0 && (
+          {patternViewPool.length === 0 && (
             <Card>
               <div
                 style={{
@@ -804,9 +962,42 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                   padding: 20,
                 }}
               >
-                Your pool is empty. Go to ➕ Add Questions to build your plan.
+                {companyFilter === "company"
+                  ? `No ${company}-specific questions in your pool yet.`
+                  : companyFilter === "others"
+                    ? "No questions from other companies in your pool yet."
+                    : "Your pool is empty. Go to ➕ Add Questions to build your plan."}
               </div>
             </Card>
+          )}
+
+          {/* read-only notice */}
+          {patternViewPool.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 11px",
+                background: "var(--bg3)",
+                borderRadius: 9,
+                border: "1px solid var(--border)",
+                fontSize: 10,
+                color: "var(--txt3)",
+              }}
+            >
+              <span style={{ fontSize: 13 }}>💡</span>
+              <span>
+                Mark questions as done in{" "}
+                <span
+                  style={{ color: accent, fontWeight: 700, cursor: "pointer" }}
+                  onClick={() => setView("today")}
+                >
+                  Today's Session
+                </span>
+                . Progress reflects here automatically.
+              </span>
+            </div>
           )}
 
           {filteredGroups.map(([pattern, qs]) => {
@@ -871,6 +1062,7 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                       onCheck={toggleQ}
                       accent={accent}
                       showCompanies
+                      readOnly
                     />
                   ))}
                 </div>

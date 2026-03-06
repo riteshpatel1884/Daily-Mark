@@ -7,10 +7,7 @@ import { load, save } from "./store.js";
 import { Bar, Tag, Card, SectionLabel, CompanyLogo } from "./ui.js";
 import PlanTab from "./plantab";
 import RoundsTab from "./roundstab";
-import AnalyticsTab from "./analyticstab";
-import SmartReminders from "./smartreminders";
 import SurvivalGuide from "./survivalguide";
-import PrepTimeline from "./preptimeline";
 
 function daysLeft(date) {
   return Math.max(0, Math.ceil((new Date(date) - Date.now()) / 86400000));
@@ -19,10 +16,7 @@ function daysLeft(date) {
 const TABS = [
   { id: "plan", label: "📋 Plan" },
   { id: "rounds", label: "🎯 Rounds" },
-  { id: "analytics", label: "📊 Stats" },
-  { id: "timeline", label: "🗓 Timeline" },
   { id: "guide", label: "🧭 Guide" },
-  { id: "reminders", label: "⚠ Pace" },
 ];
 
 export default function Dashboard({ setup, onReset }) {
@@ -123,96 +117,8 @@ export default function Dashboard({ setup, onReset }) {
         </button>
       </div>
 
-      {/* ── 4-stat row ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 8,
-          marginBottom: 14,
-        }}
-      >
-        {[
-          { label: "Days Left", value: dl, color: urgency },
-          { label: "Readiness", value: readiness + "%", color: co.color },
-          { label: "DSA Solved", value: qSolvedCount, color: "#9b72cf" },
-          {
-            label: "OA Chance",
-            value: `~${oaPct}%`,
-            color: oaPct > 65 ? "#4caf7d" : oaPct > 40 ? "#d4b44a" : "#e05252",
-          },
-        ].map((s) => (
-          <Card
-            key={s.label}
-            style={{ padding: "12px 6px", textAlign: "center" }}
-          >
-            <div
-              style={{
-                fontSize: 19,
-                fontWeight: 900,
-                color: s.color,
-                letterSpacing: "-.02em",
-                lineHeight: 1,
-              }}
-            >
-              {s.value}
-            </div>
-            <div
-              style={{
-                fontSize: 9,
-                color: "var(--txt3)",
-                marginTop: 4,
-                fontWeight: 700,
-                letterSpacing: ".06em",
-                textTransform: "uppercase",
-              }}
-            >
-              {s.label}
-            </div>
-          </Card>
-        ))}
-      </div>
+  
 
-      {/* ── Readiness bar ── */}
-      <Card style={{ marginBottom: 14, padding: "12px 16px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 7,
-          }}
-        >
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--txt)" }}>
-            {setup.company} Readiness Score
-          </span>
-          <span style={{ fontSize: 20, fontWeight: 900, color: co.color }}>
-            {readiness}
-            <span style={{ fontSize: 12, color: "var(--txt3)" }}>/100</span>
-          </span>
-        </div>
-        <Bar pct={readiness} color={co.color} height={10} />
-        <div
-          style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}
-        >
-          {Object.entries(co.topics).map(([t, w]) => {
-            const pct = Math.min(
-              100,
-              Math.round(
-                ((solved[t] || 0) / Math.max(1, Math.round(w / 3))) * 100,
-              ),
-            );
-            const color =
-              pct < 40 ? "#e05252" : pct > 70 ? "#4caf7d" : "#d4b44a";
-            return (
-              <Tag key={t} color={color}>
-                {pct < 40 ? "⚠ " : pct > 70 ? "✓ " : ""}
-                {t}
-              </Tag>
-            );
-          })}
-        </div>
-      </Card>
 
       {/* ── Tab bar ── */}
       <div
