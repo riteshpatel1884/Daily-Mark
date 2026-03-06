@@ -541,7 +541,6 @@ export default function BottomNav() {
                 }}
               />
 
-              
 
               {/* Settings — last item */}
               <button
