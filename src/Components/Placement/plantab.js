@@ -600,27 +600,27 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
           }}
         >
           {[
-            { label: "In Pool", value: activePool.length, icon: "📚" },
-            { label: "Solved", value: totalSolved, icon: "✅" },
-            { label: "Per Day", value: questionsPerDay + " Qs", icon: "📋" },
-            { label: "Days Left", value: daysLeft, icon: "⏳" },
+            { label: "In Pool", value: activePool.length},
+            { label: "Solved", value: totalSolved},
+            { label: "Per Day", value: questionsPerDay + " Qs"},
+            { label: "Days Left", value: daysLeft},
           ].map((s) => (
             <div
               key={s.label}
               style={{
                 background: "var(--bg3)",
                 borderRadius: 10,
-                padding: "10px 6px",
+                padding: "20px 6px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 4,
               }}
             >
-              <span style={{ fontSize: 18 }}>{s.icon}</span>
+             
               <span
                 style={{
-                  fontSize: 17,
+                  fontSize: 22,
                   fontWeight: 900,
                   color: "var(--txt)",
                   lineHeight: 1,
