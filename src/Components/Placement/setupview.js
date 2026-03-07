@@ -676,7 +676,7 @@ export default function SetupView({ onSubmit }) {
         }
       >
         {canSubmit
-          ? `Generate ${company} Prep Plan →`
+          ? `Generate ${company} Prep Plan`
           : "Complete the form to continue"}
       </button>
       {!canSubmit && (
