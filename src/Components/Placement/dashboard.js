@@ -74,7 +74,7 @@ export default function Dashboard({ setup, onReset }) {
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
-     
+      
       <div
         style={{
           display: "flex",
