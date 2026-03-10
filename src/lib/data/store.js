@@ -61,7 +61,7 @@ export function AppProvider({ children }) {
   const [marks, setMarks] = useState([]);
   const [history, setHistory] = useState({});
   // ── CHANGE 2: default view is "heatmap" ────────────────────────────────────
-  const [view, setViewRaw] = useState("heatmap");
+  const [view, setViewRaw] = useState("hireLab");
   const [cgpaGoal, setCgpaGoal] = useState(8.5);
   const [sem, setSem] = useState("Semester 5");
   const [ready, setReady] = useState(false);
@@ -80,7 +80,7 @@ export function AppProvider({ children }) {
     const cg = localStorage.getItem("gr_cgpa");
     const sm = localStorage.getItem("gr_sem");
     // ── CHANGE 2: restore last-visited view, fall back to "heatmap" ─────────
-    const sv = localStorage.getItem("gr_view") || "heatmap";
+   const sv = localStorage.getItem("gr_view") || "hireLab";
 
     setThemeS(t);
     setViewRaw(sv);
