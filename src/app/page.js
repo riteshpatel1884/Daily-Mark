@@ -13,7 +13,7 @@ function App() {
       <Sidebar />
       <div className="scroller">
         <NotificationBanner />
-        {/* {view === "heatmap" && <HabitView />} */}
+       
         {view === "settings" && <SettingsView />}
         {view === "hireLab" && <PlacementIntelligencePlatform />}
       </div>
