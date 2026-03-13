@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const DEFAULT_COLUMNS = [
   { id: "dsa", label: "DSA" },
   { id: "webdev", label: "Web Dev" },
