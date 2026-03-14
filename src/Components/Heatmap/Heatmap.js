@@ -29,7 +29,7 @@ const DAYS_FULL = [
   "Saturday",
 ];
 
-// ─── DATE HELPERS ─────────────────────────────────────────────────────────────
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
