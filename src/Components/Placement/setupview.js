@@ -4,72 +4,28 @@ import { useState, useMemo } from "react";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const COMPANIES = {
-  // Product-Based
   Google: { color: "#4285F4", logo: "G", type: "Product" },
   Microsoft: { color: "#00A4EF", logo: "M", type: "Product" },
-  Amazon: { color: "#FF9900", logo: "A", type: "Product" },
-  Meta: { color: "#0866FF", logo: "f", type: "Product" },
-  Apple: { color: "#555555", logo: "", type: "Product" },
-  Netflix: { color: "#E50914", logo: "N", type: "Product" },
-  Uber: { color: "#333333", logo: "U", type: "Product" },
-  Airbnb: { color: "#FF5A5F", logo: "∞", type: "Product" },
-  Stripe: { color: "#6772E5", logo: "S", type: "Product" },
-  Salesforce: { color: "#00A1E0", logo: "☁", type: "Product" },
-  Adobe: { color: "#FF0000", logo: "Ai", type: "Product" },
-  Oracle: { color: "#F80000", logo: "O", type: "Product" },
-  LinkedIn: { color: "#0077B5", logo: "in", type: "Product" },
-  Spotify: { color: "#1ED760", logo: "♫", type: "Product" },
-  Atlassian: { color: "#0052CC", logo: "A", type: "Product" },
-  Palantir: { color: "#555555", logo: "P", type: "Product" },
-  OpenAI: { color: "#10A37F", logo: "⊕", type: "Product" },
-  Anthropic: { color: "#C96442", logo: "◈", type: "Product" },
-  DeepMind: { color: "#4A90D9", logo: "D", type: "Product" },
-  Flipkart: { color: "#F7A825", logo: "F", type: "Product" },
-  // Service-Based
-  TCS: { color: "#0033A0", logo: "T", type: "Service" },
-  Infosys: { color: "#007CC3", logo: "I", type: "Service" },
-  Wipro: { color: "#341675", logo: "W", type: "Service" },
-  Accenture: { color: "#A100FF", logo: "A", type: "Service" },
-  Cognizant: { color: "#1261AF", logo: "C", type: "Service" },
-  Capgemini: { color: "#0070AD", logo: "C", type: "Service" },
-  HCL: { color: "#007DB8", logo: "H", type: "Service" },
-  IBM: { color: "#1F70C1", logo: "I", type: "Service" },
-  Deloitte: { color: "#86BC25", logo: "D", type: "Service" },
-  PWC: { color: "#D04A02", logo: "P", type: "Service" },
 };
 
 const ROLE_CATEGORIES = {
   "Software Engineering": [
     "SDE-1",
     "SDE-2",
-    "SDE-3 / Senior",
-    "Staff Engineer",
-    "Principal Engineer",
-    "EM",
+    "SDE-3 / Senior"
   ],
-  // "AI / ML": [
-  //   "ML Engineer",
-  //   "AI Engineer",
-  //   "Research Engineer",
-  //   "Data Scientist",
-  //   "MLOps Engineer",
-  //   "NLP Engineer",
-  //   "Computer Vision Engineer",
-  //   "AI Product Manager",
-  // ],
 };
 
 const PREP_GOALS = [
   { id: "dsa", label: "DSA & Coding", icon: "⚡" },
-  { id: "system", label: "System Design", icon: "🏗" },
-  // { id: "ml",     label: "ML / AI Concepts", icon: "🤖" },
-  { id: "sql", label: "SQL / Databases", icon: "🗄" },
+  { id: "system", label: "System Design", icon: "🏗", comingSoon: true },
+  { id: "sql", label: "SQL / Databases", icon: "🗄", comingSoon: true },
 ];
 
 const EXPERIENCE_LEVELS = [
   "Fresher (0–1 yr)",
-  "Junior (1–5 yrs)",
-  "Senior (5+ yrs)",
+  "Junior (1–3 yrs)",
+  "Senior (3+ yrs)",
 ];
 
 // ─── UI primitives — all use CSS vars ────────────────────────────────────────
@@ -80,7 +36,6 @@ const Label = ({ children }) => (
   </div>
 );
 
-// Small pill chip — uses CSS vars for border/bg, accent color for active
 const Chip = ({ active, color = "#5b8def", onClick, children }) => (
   <button
     onClick={onClick}
@@ -118,7 +73,6 @@ const Tag = ({ color, children }) => (
   </span>
 );
 
-// Card uses existing .card class from globals.css
 const C = ({ children, style = {} }) => (
   <div className="card" style={style}>
     {children}
@@ -131,8 +85,6 @@ export default function SetupView({ onSubmit }) {
   const [company, setCompany] = useState("Google");
   const [role, setRole] = useState("SDE-1");
   const [date, setDate] = useState("");
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All");
   const [goals, setGoals] = useState(["dsa"]);
   const [experience, setExperience] = useState("Junior (1–5 yrs)");
   const [activeRoleTab, setActiveRoleTab] = useState("Software Engineering");
@@ -145,23 +97,15 @@ export default function SetupView({ onSubmit }) {
     ? Math.ceil((new Date(date) - new Date()) / 86400000)
     : null;
 
-  const filteredCompanies = useMemo(
-    () =>
-      Object.entries(COMPANIES).filter(
-        ([name, info]) =>
-          name.toLowerCase().includes(search.toLowerCase()) &&
-          (typeFilter === "All" || info.type === typeFilter),
-      ),
-    [search, typeFilter],
-  );
-
   const co = COMPANIES[company] ?? { color: "#5b8def" };
-  const toggleGoal = (id) =>
+  const toggleGoal = (id) => {
+    const goal = PREP_GOALS.find((g) => g.id === id);
+    if (goal?.comingSoon) return;
     setGoals((p) => (p.includes(id) ? p.filter((g) => g !== id) : [...p, id]));
+  };
 
   const canSubmit = date && goals.length > 0;
 
-  // Timeline urgency
   const urgencyColor = !daysLeft
     ? "var(--txt3)"
     : daysLeft < 7
@@ -203,8 +147,6 @@ export default function SetupView({ onSubmit }) {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 6px;
-          max-height: 256px;
-          overflow-y: auto;
         }
         .sv-goal-grid {
           display: grid;
@@ -224,23 +166,6 @@ export default function SetupView({ onSubmit }) {
           border: 2px solid var(--border);
         }
         .sv-co-btn:hover { background: var(--bg4); }
-        .sv-filter-btn {
-          padding: 6px 10px;
-          border-radius: 7px;
-          font-size: 10px;
-          font-weight: 700;
-          border: 1.5px solid var(--border2);
-          background: var(--bg3);
-          color: var(--txt2);
-          cursor: pointer;
-          font-family: var(--font);
-          transition: all .15s;
-        }
-        .sv-filter-btn.on {
-          border-color: var(--blue);
-          background: color-mix(in srgb, var(--blue) 15%, transparent);
-          color: var(--blue);
-        }
         .sv-role-tab {
           padding: 4px 10px;
           border-radius: 6px;
@@ -279,6 +204,22 @@ export default function SetupView({ onSubmit }) {
           background: color-mix(in srgb, var(--blue) 12%, transparent);
           color: var(--txt);
         }
+        .sv-goal-btn.disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+        .sv-coming-soon {
+          font-size: 8px;
+          font-weight: 800;
+          padding: 2px 5px;
+          border-radius: 4px;
+          background: color-mix(in srgb, var(--orange) 18%, transparent);
+          color: var(--orange);
+          border: 1px solid color-mix(in srgb, var(--orange) 30%, transparent);
+          white-space: nowrap;
+          letter-spacing: .04em;
+          text-transform: uppercase;
+        }
         .sv-submit-btn {
           width: 100%;
           padding: 15px;
@@ -305,21 +246,6 @@ export default function SetupView({ onSubmit }) {
           align-items: center;
           margin-bottom: 14px;
         }
-        .sv-search {
-          flex: 1 1 110px;
-          min-width: 80px;
-          background: var(--bg3);
-          border: 1.5px solid var(--border);
-          border-radius: 8px;
-          padding: 7px 10px;
-          color: var(--txt);
-          font-size: 12px;
-          font-family: var(--font);
-          outline: none;
-          transition: border-color .15s;
-        }
-        .sv-search:focus { border-color: var(--txt2); }
-        .sv-search::placeholder { color: var(--txt3); }
         .sv-date {
           width: 100%;
           background: var(--bg3);
@@ -338,7 +264,7 @@ export default function SetupView({ onSubmit }) {
         @media (max-width: 600px) {
           .sv-main-grid   { grid-template-columns: 1fr !important; }
           .sv-bottom-grid { grid-template-columns: 1fr !important; }
-          .sv-company-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .sv-company-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .sv-goal-grid   { grid-template-columns: 1fr !important; }
         }
       `}</style>
@@ -404,35 +330,8 @@ export default function SetupView({ onSubmit }) {
         {/* Company */}
         <C>
           <Label>Target Company</Label>
-          <div
-            style={{
-              display: "flex",
-              gap: 6,
-              marginBottom: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <input
-              className="sv-search"
-              placeholder="Search companies…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <div style={{ display: "flex", gap: 4 }}>
-              {["All", "Product", "Service"].map((t) => (
-                <button
-                  key={t}
-                  className={`sv-filter-btn${typeFilter === t ? " on" : ""}`}
-                  onClick={() => setTypeFilter(t)}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="sv-company-grid">
-            {filteredCompanies.map(([name, info]) => {
+            {Object.entries(COMPANIES).map(([name, info]) => {
               const sel = company === name;
               return (
                 <button
@@ -483,14 +382,9 @@ export default function SetupView({ onSubmit }) {
                       fontWeight: 600,
                       padding: "1px 4px",
                       borderRadius: 4,
-                      color:
-                        info.type === "Product"
-                          ? "var(--yellow)"
-                          : "var(--green)",
+                      color: "var(--yellow)",
                       background:
-                        info.type === "Product"
-                          ? "color-mix(in srgb, var(--yellow) 12%, transparent)"
-                          : "color-mix(in srgb, var(--green) 12%, transparent)",
+                        "color-mix(in srgb, var(--yellow) 12%, transparent)",
                     }}
                   >
                     {info.type}
@@ -498,19 +392,32 @@ export default function SetupView({ onSubmit }) {
                 </button>
               );
             })}
-            {filteredCompanies.length === 0 && (
-              <div
-                style={{
-                  gridColumn: "1/-1",
-                  textAlign: "center",
-                  color: "var(--txt3)",
-                  fontSize: 12,
-                  padding: "16px 0",
-                }}
-              >
-                No companies found
-              </div>
-            )}
+          </div>
+
+          {/* Coming Soon row */}
+          <div
+            style={{
+              marginTop: 10,
+              padding: "9px 12px",
+              borderRadius: 10,
+              border: "1.5px dashed var(--border2)",
+              background: "var(--bg2)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              style={{ fontSize: 11, color: "var(--txt3)", fontWeight: 600 }}
+            >
+              More companies
+            </span>
+            <span className="sv-coming-soon">Coming Soon</span>
+            <span
+              style={{ fontSize: 10, color: "var(--txt3)", marginLeft: "auto" }}
+            >
+              Amazon, Meta, Apple &amp; more
+            </span>
           </div>
         </C>
 
@@ -572,15 +479,18 @@ export default function SetupView({ onSubmit }) {
           <div className="sv-goal-grid">
             {PREP_GOALS.map((g) => {
               const active = goals.includes(g.id);
+              const locked = !!g.comingSoon;
               return (
                 <button
                   key={g.id}
-                  className={`sv-goal-btn${active ? " on" : ""}`}
+                  className={`sv-goal-btn${active ? " on" : ""}${locked ? " disabled" : ""}`}
                   onClick={() => toggleGoal(g.id)}
                 >
                   <span style={{ fontSize: 15 }}>{g.icon}</span>
                   <span style={{ flex: 1 }}>{g.label}</span>
-                  {active && (
+                  {locked ? (
+                    <span className="sv-coming-soon">Soon</span>
+                  ) : active ? (
                     <span
                       style={{
                         width: 15,
@@ -598,7 +508,7 @@ export default function SetupView({ onSubmit }) {
                     >
                       ✓
                     </span>
-                  )}
+                  ) : null}
                 </button>
               );
             })}
