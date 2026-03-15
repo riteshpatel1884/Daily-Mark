@@ -40,7 +40,7 @@ function offsetDate(n) {
   return d.toISOString().slice(0, 10);
 }
 
-// ✅ CHANGE 1: Only TODAY is editable. Yesterday and older are always locked.
+// ✅ CHANGE 1:  is editable. Yesterday and older are always locked.
 function isEditable(dateStr) {
   return dateStr === todayStr();
 }
