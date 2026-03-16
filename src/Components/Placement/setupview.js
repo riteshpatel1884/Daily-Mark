@@ -28,7 +28,7 @@ const EXPERIENCE_LEVELS = [
   "Senior (3+ yrs)",
 ];
 
-// ─── UI primitives — all use CSS vars ────────────────────────────────────────
+//  UI primitives — all use CSS vars ────────────────────────────────────────
 
 const Label = ({ children }) => (
   <div className="slabel" style={{ marginBottom: 10 }}>
