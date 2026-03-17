@@ -1079,7 +1079,7 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
         )}
       </Card>
 
-    
+      {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: 6 }}>
         {[
           { id: "today", label: "Today" },
