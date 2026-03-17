@@ -20,6 +20,7 @@ const PREP_GOALS = [
   { id: "dsa", label: "DSA & Coding", icon: "⚡" },
   { id: "system", label: "System Design", icon: "🏗", comingSoon: true },
   { id: "sql", label: "SQL / Databases", icon: "🗄", comingSoon: true },
+  { id: "hr", label: "HR Interview", icon: "🎯" },
 ];
 
 const EXPERIENCE_LEVELS = [

@@ -1,10 +1,4 @@
-// pip.PlanTab.jsx — Pattern-wise questions + Today's auto-picked session
-// Logic:
-//   Tier 1: Company-specific questions (always in pool automatically)
-//   Tier 2: High-frequency (freq>=4) questions from other companies (suggested, user accepts/rejects)
-//   Tier 3: Remaining questions — user can manually add
-//   Today: picks questionsPerDay questions sequentially from active pool, cycling by day
-
+// pip.PlanTab.jsx
 "use client";
 import { useState, useMemo } from "react";
 import { Bar, Card, SectionLabel } from "./ui.js";
@@ -14,10 +8,224 @@ import {
   groupByPattern,
   sortByFrequency,
 } from "./QuestionDatabase/Questions.js";
+import {
+  HR_QUESTIONS,
+  HR_CATEGORY_COLORS,
+  sortHRByFrequency,
+} from "./QuestionDatabase/HR.js";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const DIFF_COLOR = { Easy: "#4caf7d", Medium: "#d4b44a", Hard: "#e05252" };
 const FREQ_STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
+const HR_CATEGORIES_LIST = Object.keys(HR_CATEGORY_COLORS);
+
+// ─── HR Answer Popup ──────────────────────────────────────────────────────────
+function HRPopup({ q, checked, onCheck, onClose }) {
+  const col = HR_CATEGORY_COLORS[q.category] || "#9b72cf";
+  return (
+    <>
+      {/* backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1000,
+          background: "rgba(0,0,0,0.55)",
+        }}
+      />
+      {/* modal */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1001,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            pointerEvents: "all",
+            width: "100%",
+            maxWidth: 520,
+            maxHeight: "82vh",
+            overflowY: "auto",
+            background: "var(--bg)",
+            border: `1.5px solid ${col}44`,
+            borderRadius: 16,
+          }}
+        >
+          {/* sticky header */}
+          <div
+            style={{
+              padding: "16px 18px 14px",
+              borderBottom: "1px solid var(--border)",
+              position: "sticky",
+              top: 0,
+              background: "var(--bg)",
+              zIndex: 1,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    marginBottom: 6,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 800,
+                      padding: "2px 8px",
+                      borderRadius: 99,
+                      background: col + "22",
+                      color: col,
+                      border: `1px solid ${col}44`,
+                    }}
+                  >
+                    {q.category}
+                  </span>
+                  <span style={{ fontSize: 9, color: "#d4b44a" }}>
+                    {FREQ_STARS[q.frequency]}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "var(--txt)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {q.question}
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  flexShrink: 0,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg3)",
+                  color: "var(--txt3)",
+                  cursor: "pointer",
+                  fontSize: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* tip */}
+          <div style={{ padding: "14px 18px 0" }}>
+            <div
+              style={{
+                fontSize: 10,
+                color: "var(--txt3)",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: ".07em",
+                marginBottom: 6,
+              }}
+            >
+              💡 Prep Tip
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--txt3)",
+                lineHeight: 1.55,
+                padding: "8px 10px",
+                background: "var(--bg3)",
+                borderRadius: 8,
+                borderLeft: `2px solid ${col}88`,
+              }}
+            >
+              {q.tips}
+            </div>
+          </div>
+
+          {/* sample answer */}
+          <div style={{ padding: "14px 18px" }}>
+            <div
+              style={{
+                fontSize: 10,
+                color: "var(--txt3)",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: ".07em",
+                marginBottom: 8,
+              }}
+            >
+              ✍️ Sample Answer
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: "var(--txt)",
+                lineHeight: 1.7,
+                whiteSpace: "pre-line",
+                padding: "12px 14px",
+                background: col + "0d",
+                border: `1px solid ${col}28`,
+                borderRadius: 10,
+              }}
+            >
+              {q.answer}
+            </div>
+          </div>
+
+          {/* mark done — lives only here, not on the row */}
+          <div style={{ padding: "0 18px 18px" }}>
+            <button
+              onClick={() => {
+                onCheck(q.id);
+                onClose();
+              }}
+              style={{
+                width: "100%",
+                padding: 12,
+                borderRadius: 10,
+                border: checked ? "1.5px solid var(--border)" : "none",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 800,
+                background: checked ? "var(--bg3)" : col,
+                color: checked ? "var(--txt3)" : "#fff",
+                transition: "all .15s",
+              }}
+            >
+              {checked ? "✓ Marked as Done — Click to Undo" : "Mark as Done"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 // ─── atoms ────────────────────────────────────────────────────────────────────
 function DiffBadge({ diff }) {
@@ -56,8 +264,68 @@ function PatternPill({ pattern }) {
   );
 }
 
-// ─── QuestionRow ──────────────────────────────────────────────────────────────
-// readOnly=true → used in Patterns section (no checkbox interaction, dimmed if solved)
+function CatPill({ category }) {
+  const col = HR_CATEGORY_COLORS[category] || "#888";
+  return (
+    <span
+      style={{
+        fontSize: 9,
+        fontWeight: 700,
+        padding: "2px 8px",
+        borderRadius: 99,
+        background: col + "18",
+        color: col,
+        border: `1px solid ${col}33`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {category}
+    </span>
+  );
+}
+
+function SectionDivider({ label, count, done, color }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        margin: "16px 0 10px",
+      }}
+    >
+      <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "4px 12px",
+          borderRadius: 99,
+          border: `1px solid ${color}44`,
+          background: color + "12",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            color,
+            letterSpacing: ".03em",
+          }}
+        >
+          {label}
+        </span>
+        <span style={{ fontSize: 10, fontWeight: 700, color, opacity: 0.7 }}>
+          {done}/{count}
+        </span>
+      </div>
+      <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+    </div>
+  );
+}
+
+// ─── DSA QuestionRow ──────────────────────────────────────────────────────────
 function QuestionRow({
   q,
   checked,
@@ -82,65 +350,37 @@ function QuestionRow({
         opacity: readOnly && checked ? 0.55 : 1,
       }}
     >
-      {/* checkbox — hidden in readOnly, shown as static indicator */}
-      {!readOnly ? (
-        <div
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: 5,
-            flexShrink: 0,
-            transition: "all .15s",
-            border: `2px solid ${checked ? accent : "var(--border)"}`,
-            background: checked ? accent : "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {checked && (
-            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-              <path
-                d="M1 4L3.5 6.5L9 1"
-                stroke="#fff"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </div>
-      ) : (
-        /* read-only solved indicator */
-        <div
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: 5,
-            flexShrink: 0,
-            border: `2px solid ${checked ? accent + "88" : "var(--border)"}`,
-            background: checked ? accent + "22" : "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {checked && (
-            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-              <path
-                d="M1 4L3.5 6.5L9 1"
-                stroke={accent}
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.7"
-              />
-            </svg>
-          )}
-        </div>
-      )}
-
-      {/* body */}
+      <div
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: 5,
+          flexShrink: 0,
+          transition: "all .15s",
+          border: `2px solid ${checked ? accent : "var(--border)"}`,
+          background: checked
+            ? readOnly
+              ? accent + "22"
+              : accent
+            : "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {checked && (
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path
+              d="M1 4L3.5 6.5L9 1"
+              stroke={readOnly ? accent : "#fff"}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={readOnly ? 0.7 : 1}
+            />
+          </svg>
+        )}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -194,8 +434,6 @@ function QuestionRow({
             </span>
           )}
         </div>
-
-        {/* read-only hint */}
         {readOnly && checked && (
           <div
             style={{
@@ -210,8 +448,6 @@ function QuestionRow({
           </div>
         )}
       </div>
-
-      {/* LC link */}
       <a
         href={q.url}
         target="_blank"
@@ -234,7 +470,100 @@ function QuestionRow({
   );
 }
 
-// ─── SuggestRow (tier-2) ──────────────────────────────────────────────────────
+// ─── HR QuestionRow — clicking opens popup, NO inline mark button ─────────────
+function HRQuestionRow({ q, checked, onOpen }) {
+  const col = HR_CATEGORY_COLORS[q.category] || "#888";
+  return (
+    <div
+      onClick={() => onOpen(q)}
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 10,
+        padding: "10px 12px",
+        borderRadius: 10,
+        cursor: "pointer",
+        background: checked ? col + "10" : "var(--bg3)",
+        border: `1px solid ${checked ? col + "44" : "var(--border)"}`,
+        transition: "all .15s",
+      }}
+    >
+      {/* done indicator — visual only */}
+      <div
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: 5,
+          flexShrink: 0,
+          marginTop: 1,
+          border: `2px solid ${checked ? col : "var(--border)"}`,
+          background: checked ? col + "22" : "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {checked && (
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path
+              d="M1 4L3.5 6.5L9 1"
+              stroke={col}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+            />
+          </svg>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            lineHeight: 1.45,
+            color: checked ? "var(--txt3)" : "var(--txt)",
+            textDecoration: checked ? "line-through" : "none",
+          }}
+        >
+          {q.question}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 5,
+            marginTop: 5,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <CatPill category={q.category} />
+          <span style={{ fontSize: 9, color: "#d4b44a" }}>
+            {FREQ_STARS[q.frequency]}
+          </span>
+        </div>
+      </div>
+      {/* view answer hint */}
+      <span
+        style={{
+          fontSize: 10,
+          color: col,
+          fontWeight: 700,
+          flexShrink: 0,
+          padding: "3px 8px",
+          borderRadius: 6,
+          background: col + "15",
+          border: `1px solid ${col}33`,
+          whiteSpace: "nowrap",
+        }}
+      >
+        View ↗
+      </span>
+    </div>
+  );
+}
+
+// ─── SuggestRow ───────────────────────────────────────────────────────────────
 function SuggestRow({ q, onAccept, onReject, accent }) {
   return (
     <div
@@ -325,7 +654,7 @@ function SuggestRow({ q, onAccept, onReject, accent }) {
   );
 }
 
-// ─── AddRow (tier-3) ──────────────────────────────────────────────────────────
+// ─── AddRow ───────────────────────────────────────────────────────────────────
 function AddRow({ q, onAdd, accent }) {
   return (
     <div
@@ -403,13 +732,12 @@ function AddRow({ q, onAdd, accent }) {
 export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
   const accent = co?.color || "#5b8def";
   const company = setup?.company || "";
+  const hasHR = setup?.goals?.includes("hr");
 
-  // ── read pool membership from solved (special prefix keys) ──
-  // __accepted_<id>  → tier-2 question accepted into pool
-  // __rejected_<id>  → tier-2 suggestion dismissed
-  // __extra_<id>     → tier-3 question manually added
-  // __q_<id>         → question marked solved/checked
+  // ── popup ─────────────────────────────────────────────────────────────────
+  const [popupQ, setPopupQ] = useState(null);
 
+  // ── DSA pool keys ─────────────────────────────────────────────────────────
   const accepted = useMemo(
     () =>
       new Set(
@@ -441,22 +769,13 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
   function setKey(key) {
     setSolved((p) => ({ ...p, [key]: true }));
   }
-  function delKey(key) {
-    setSolved((p) => {
-      const n = { ...p };
-      delete n[key];
-      return n;
-    });
-  }
 
-  // ── Tier 1: all questions for this company ──
+  // ── DSA tiers ─────────────────────────────────────────────────────────────
   const tier1 = useMemo(
     () => sortByFrequency(getQuestionsForCompany(company)),
     [company],
   );
   const tier1Ids = useMemo(() => new Set(tier1.map((q) => q.id)), [tier1]);
-
-  // ── Tier 2: high-freq (>=4) from other companies ──
   const tier2All = useMemo(
     () =>
       sortByFrequency(
@@ -472,8 +791,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
     () => tier2All.filter((q) => !accepted.has(q.id) && !rejected.has(q.id)),
     [tier2All, accepted, rejected],
   );
-
-  // ── Tier 3: everything else (not in tier1, not in tier2All) ──
   const tier2AllIds = useMemo(
     () => new Set(tier2All.map((q) => q.id)),
     [tier2All],
@@ -491,69 +808,91 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
     () => tier3Pool.filter((q) => !extras.has(q.id)),
     [tier3Pool, extras],
   );
-
-  // ── Active pool = tier1 + accepted tier2 + added tier3 (sorted by freq) ──
-  const activePool = useMemo(
+  const dsaPool = useMemo(
     () => sortByFrequency([...tier1, ...tier2Accepted, ...tier3Added]),
     [tier1, tier2Accepted, tier3Added],
   );
 
-  // ── questionsPerDay: total pool / days left, clamped 2-10 ──
-  const questionsPerDay = useMemo(() => {
-    if (!daysLeft || daysLeft <= 0 || !activePool.length)
-      return Math.min(activePool.length, 5);
-    return Math.max(2, Math.min(10, Math.ceil(activePool.length / daysLeft)));
-  }, [activePool.length, daysLeft]);
+  // ── HR pool ───────────────────────────────────────────────────────────────
+  const hrPool = useMemo(() => sortHRByFrequency(HR_QUESTIONS), []);
 
-  // ── Today: pick questionsPerDay questions cycling through active pool ──
-  const todayStr = new Date().toISOString().split("T")[0];
+  // ── questions per day ─────────────────────────────────────────────────────
+  const dsaQPD = useMemo(() => {
+    if (!daysLeft || daysLeft <= 0 || !dsaPool.length)
+      return Math.min(dsaPool.length, 5);
+    return Math.max(2, Math.min(10, Math.ceil(dsaPool.length / daysLeft)));
+  }, [dsaPool.length, daysLeft]);
+
+  const hrQPD = useMemo(() => {
+    if (!hasHR || !daysLeft || daysLeft <= 0) return 0;
+    return Math.max(1, Math.min(8, Math.ceil(hrPool.length / daysLeft)));
+  }, [hasHR, hrPool.length, daysLeft]);
+
+  // ── today's questions ─────────────────────────────────────────────────────
   const dayIndex = useMemo(() => Math.floor(Date.now() / 86400000), []);
 
-  const todayQs = useMemo(() => {
-    if (!activePool.length) return [];
-    const qpd = Math.max(1, questionsPerDay);
-    const start = (dayIndex * qpd) % activePool.length;
-    const result = [];
-    for (let i = 0; i < qpd; i++) {
-      result.push(activePool[(start + i) % activePool.length]);
-    }
-    return result;
-  }, [activePool, dayIndex, questionsPerDay]);
+  const todayDsaQs = useMemo(() => {
+    if (!dsaPool.length) return [];
+    const qpd = Math.max(1, dsaQPD);
+    const start = (dayIndex * qpd) % dsaPool.length;
+    return Array.from(
+      { length: qpd },
+      (_, i) => dsaPool[(start + i) % dsaPool.length],
+    );
+  }, [dsaPool, dayIndex, dsaQPD]);
 
-  const todayDone = todayQs.filter((q) => solved[`__q_${q.id}`]).length;
-  const todayPct = todayQs.length
-    ? Math.round((todayDone / todayQs.length) * 100)
-    : 0;
+  const todayHrQs = useMemo(() => {
+    if (!hasHR || !hrPool.length) return [];
+    const qpd = Math.max(1, hrQPD);
+    const start = (dayIndex * qpd) % hrPool.length;
+    return Array.from(
+      { length: qpd },
+      (_, i) => hrPool[(start + i) % hrPool.length],
+    );
+  }, [hasHR, hrPool, dayIndex, hrQPD]);
 
-  // ── Overall stats ──
-  const totalSolved = activePool.filter((q) => solved[`__q_${q.id}`]).length;
-  const overallPct = activePool.length
-    ? Math.round((totalSolved / activePool.length) * 100)
-    : 0;
-
-  function toggleQ(qid) {
+  // ── toggle helpers ────────────────────────────────────────────────────────
+  function toggleDSA(qid) {
     setSolved((p) => ({ ...p, [`__q_${qid}`]: !p[`__q_${qid}`] }));
   }
+  function toggleHR(qid) {
+    setSolved((p) => ({ ...p, [`__hr_${qid}`]: !p[`__hr_${qid}`] }));
+  }
 
-  // ── UI state ──
+  // ── stats ─────────────────────────────────────────────────────────────────
+  const todayDsaDone = todayDsaQs.filter((q) => solved[`__q_${q.id}`]).length;
+  const todayHrDone = todayHrQs.filter((q) => solved[`__hr_${q.id}`]).length;
+  const todayTotal = todayDsaQs.length + todayHrQs.length;
+  const todayDone = todayDsaDone + todayHrDone;
+  const todayPct = todayTotal ? Math.round((todayDone / todayTotal) * 100) : 0;
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const dsaSolved = dsaPool.filter((q) => solved[`__q_${q.id}`]).length;
+  const hrSolved = HR_QUESTIONS.filter((q) => solved[`__hr_${q.id}`]).length;
+  const totalInPool = dsaPool.length + (hasHR ? HR_QUESTIONS.length : 0);
+  const totalSolved = dsaSolved + (hasHR ? hrSolved : 0);
+  const overallPct = totalInPool
+    ? Math.round((totalSolved / totalInPool) * 100)
+    : 0;
+
+  // ── UI state ──────────────────────────────────────────────────────────────
   const [view, setView] = useState("today");
   const [patternFilter, setPatternFilter] = useState("All");
-  // "all" | "company" | "others"
   const [companyFilter, setCompanyFilter] = useState("all");
   const [showTier2, setShowTier2] = useState(true);
   const [addSearch, setAddSearch] = useState("");
   const [addPatFilter, setAddPatFilter] = useState("All");
+  const [hrCatFilter, setHrCatFilter] = useState("All");
 
-  // ── Filtered active pool for Patterns view (by company ownership) ──
+  // ── DSA pattern groups ────────────────────────────────────────────────────
   const patternViewPool = useMemo(() => {
     if (companyFilter === "company")
-      return activePool.filter((q) => tier1Ids.has(q.id));
+      return dsaPool.filter((q) => tier1Ids.has(q.id));
     if (companyFilter === "others")
-      return activePool.filter((q) => !tier1Ids.has(q.id));
-    return activePool;
-  }, [activePool, companyFilter, tier1Ids]);
+      return dsaPool.filter((q) => !tier1Ids.has(q.id));
+    return dsaPool;
+  }, [dsaPool, companyFilter, tier1Ids]);
 
-  // pattern groups for active pool
   const patternGroups = useMemo(
     () => groupByPattern(patternViewPool),
     [patternViewPool],
@@ -567,7 +906,25 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
       ? Object.entries(patternGroups)
       : Object.entries(patternGroups).filter(([p]) => p === patternFilter);
 
-  // tier3 filtered for add panel
+  // ── HR category groups ────────────────────────────────────────────────────
+  const hrPatternQs = useMemo(
+    () =>
+      hrCatFilter === "All"
+        ? HR_QUESTIONS
+        : HR_QUESTIONS.filter((q) => q.category === hrCatFilter),
+    [hrCatFilter],
+  );
+  const hrGrouped = useMemo(
+    () =>
+      hrPatternQs.reduce((acc, q) => {
+        if (!acc[q.category]) acc[q.category] = [];
+        acc[q.category].push(q);
+        return acc;
+      }, {}),
+    [hrPatternQs],
+  );
+
+  // ── add panel ─────────────────────────────────────────────────────────────
   const addPatterns = useMemo(
     () => ["All", ...new Set(tier3Available.map((q) => q.pattern))],
     [tier3Available],
@@ -586,9 +943,20 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
     [tier3Available, addSearch, addPatFilter],
   );
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* ── Overview stats ── */}
+      {/* HR answer popup */}
+      {popupQ && (
+        <HRPopup
+          q={popupQ}
+          checked={!!solved[`__hr_${popupQ.id}`]}
+          onCheck={toggleHR}
+          onClose={() => setPopupQ(null)}
+        />
+      )}
+
+      {/* ── Overview ── */}
       <Card>
         <SectionLabel>Prep Overview</SectionLabel>
         <div
@@ -600,10 +968,10 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
           }}
         >
           {[
-            { label: "In Pool", value: activePool.length},
-            { label: "Solved", value: totalSolved},
-            { label: "Per Day", value: questionsPerDay + " Qs"},
-            { label: "Days Left", value: daysLeft},
+            { label: "In Pool", value: totalInPool },
+            { label: "Solved", value: totalSolved },
+            { label: "DSA/Day", value: dsaQPD + " Qs" },
+            { label: "Days Left", value: daysLeft },
           ].map((s) => (
             <div
               key={s.label}
@@ -617,7 +985,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                 gap: 4,
               }}
             >
-             
               <span
                 style={{
                   fontSize: 22,
@@ -644,14 +1011,80 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
           ))}
         </div>
         <Bar pct={overallPct} color={accent} height={6} />
+        {hasHR && (
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div
+              style={{
+                flex: 1,
+                background: "var(--bg3)",
+                borderRadius: 8,
+                padding: "6px 10px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: "var(--txt3)",
+                  textTransform: "uppercase",
+                  letterSpacing: ".05em",
+                  marginBottom: 3,
+                }}
+              >
+                ⚡ DSA
+              </div>
+              <Bar
+                pct={
+                  dsaPool.length
+                    ? Math.round((dsaSolved / dsaPool.length) * 100)
+                    : 0
+                }
+                color={accent}
+                height={4}
+              />
+              <div style={{ fontSize: 9, color: "var(--txt3)", marginTop: 3 }}>
+                {dsaSolved}/{dsaPool.length}
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "var(--bg3)",
+                borderRadius: 8,
+                padding: "6px 10px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: "var(--txt3)",
+                  textTransform: "uppercase",
+                  letterSpacing: ".05em",
+                  marginBottom: 3,
+                }}
+              >
+                🎯 HR
+              </div>
+              <Bar
+                pct={Math.round((hrSolved / HR_QUESTIONS.length) * 100)}
+                color="#9b72cf"
+                height={4}
+              />
+              <div style={{ fontSize: 9, color: "var(--txt3)", marginTop: 3 }}>
+                {hrSolved}/{HR_QUESTIONS.length} · {hrQPD}q/day
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
 
-      {/* ── View tabs ── */}
+      {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: 6 }}>
         {[
-          { id: "today", label: "📅 Today" },
-          { id: "patterns", label: "🧩 Patterns" },
-          { id: "add", label: "➕ Add Questions" },
+          { id: "today", label: "Today" },
+          // { id: "patterns", label: "Patterns" },
+          { id: "add", label: "Add Questions" },
         ].map((v) => (
           <button
             key={v.id}
@@ -674,9 +1107,10 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
         ))}
       </div>
 
-      {/* ════════════════ TODAY ════════════════ */}
+      {/* ════ TODAY ════ */}
       {view === "today" && (
         <Card>
+          {/* header */}
           <div
             style={{
               display: "flex",
@@ -692,7 +1126,7 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
               <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>
                 {todayStr} ·{" "}
                 <span style={{ color: accent, fontWeight: 700 }}>
-                  {todayDone}/{todayQs.length} done
+                  {todayDone}/{todayTotal} done
                 </span>
               </div>
             </div>
@@ -711,7 +1145,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             color={todayPct === 100 ? "#4caf7d" : accent}
             height={8}
           />
-
           {todayPct === 100 && (
             <div
               style={{
@@ -729,33 +1162,31 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             </div>
           )}
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 7,
-              marginTop: 12,
-            }}
-          >
-            {todayQs.length === 0 ? (
+          {/* DSA section */}
+          <SectionDivider
+            label="⚡ DSA & Coding"
+            count={todayDsaQs.length}
+            done={todayDsaDone}
+            color={accent}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {todayDsaQs.length === 0 ? (
               <div
                 style={{
                   textAlign: "center",
                   color: "var(--txt3)",
                   fontSize: 13,
-                  padding: 24,
+                  padding: 16,
                 }}
               >
-                No questions in your pool yet. Go to ➕ Add Questions to set up
-                your plan.
+                No DSA questions in your pool yet. Go to ➕ Add Questions.
               </div>
             ) : (
-              todayQs.map((q) => (
+              todayDsaQs.map((q) => (
                 <div
                   key={q.id}
                   style={{ display: "flex", flexDirection: "column", gap: 5 }}
                 >
-                  {/* ── Tags row (pattern pill + topic + companies) ── */}
                   <div
                     style={{
                       display: "flex",
@@ -765,7 +1196,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                       paddingLeft: 2,
                     }}
                   >
-                    {/* Pattern pill (filled / accent-tinted) */}
                     <span
                       style={{
                         fontSize: 9,
@@ -779,7 +1209,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                     >
                       {q.pattern}
                     </span>
-                    {/* Topic */}
                     <span
                       style={{
                         fontSize: 9,
@@ -790,30 +1219,27 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                     >
                       {q.topic}
                     </span>
-                    {/* Companies */}
-                    {q.companies && q.companies.length > 0 && (
+                    {q.companies?.length > 0 && (
                       <span style={{ fontSize: 9, color: "var(--txt3)" }}>
                         {q.companies.slice(0, 4).join(" · ")}
                       </span>
                     )}
                   </div>
-
                   <QuestionRow
                     q={q}
                     checked={!!solved[`__q_${q.id}`]}
-                    onCheck={toggleQ}
+                    onCheck={toggleDSA}
                     accent={accent}
                   />
                 </div>
               ))
             )}
           </div>
-
-          {todayQs.length > 0 && (
+          {todayDsaQs.length > 0 && (
             <div
               style={{
-                marginTop: 12,
-                padding: "8px 12px",
+                marginTop: 8,
+                padding: "7px 12px",
                 background: "var(--bg3)",
                 borderRadius: 10,
                 fontSize: 11,
@@ -823,16 +1249,77 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
               <span style={{ fontWeight: 700, color: "var(--txt2)" }}>
                 Today's patterns:{" "}
               </span>
-              {[...new Set(todayQs.map((q) => q.pattern))].join(" · ")}
+              {[...new Set(todayDsaQs.map((q) => q.pattern))].join(" · ")}
             </div>
+          )}
+
+          {/* HR section */}
+          {hasHR && (
+            <>
+              <SectionDivider
+                label="🎯 HR Interview"
+                count={todayHrQs.length}
+                done={todayHrDone}
+                color="#9b72cf"
+              />
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--txt3)",
+                  marginBottom: 8,
+                  padding: "0 2px",
+                }}
+              >
+                Tap any question to read a sample answer and mark it done.
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {todayHrQs.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "var(--txt3)",
+                      fontSize: 13,
+                      padding: 16,
+                    }}
+                  >
+                    No HR questions available.
+                  </div>
+                ) : (
+                  todayHrQs.map((q) => (
+                    <HRQuestionRow
+                      key={q.id}
+                      q={q}
+                      checked={!!solved[`__hr_${q.id}`]}
+                      onOpen={setPopupQ}
+                    />
+                  ))
+                )}
+              </div>
+              {todayHrQs.length > 0 && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: "7px 12px",
+                    background: "var(--bg3)",
+                    borderRadius: 10,
+                    fontSize: 11,
+                    color: "var(--txt3)",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "var(--txt2)" }}>
+                    Today's HR categories:{" "}
+                  </span>
+                  {[...new Set(todayHrQs.map((q) => q.category))].join(" · ")}
+                </div>
+              )}
+            </>
           )}
         </Card>
       )}
 
-      {/* ════════════════ PATTERNS ════════════════ */}
+     
       {view === "patterns" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* tier summary badges */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <span
               style={{
@@ -872,7 +1359,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             </span>
           </div>
 
-          {/* ── Company filter ── */}
           <div
             style={{
               display: "flex",
@@ -915,7 +1401,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             ))}
           </div>
 
-          {/* pattern filter chips */}
           <div
             style={{
               display: "flex",
@@ -952,26 +1437,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             })}
           </div>
 
-          {patternViewPool.length === 0 && (
-            <Card>
-              <div
-                style={{
-                  textAlign: "center",
-                  color: "var(--txt3)",
-                  fontSize: 13,
-                  padding: 20,
-                }}
-              >
-                {companyFilter === "company"
-                  ? `No ${company}-specific questions in your pool yet.`
-                  : companyFilter === "others"
-                    ? "No questions from other companies in your pool yet."
-                    : "Your pool is empty. Go to ➕ Add Questions to build your plan."}
-              </div>
-            </Card>
-          )}
-
-          {/* read-only notice */}
           {patternViewPool.length > 0 && (
             <div
               style={{
@@ -988,7 +1453,7 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
             >
               <span style={{ fontSize: 13 }}>💡</span>
               <span>
-                Mark questions as done in{" "}
+                Mark questions done in{" "}
                 <span
                   style={{ color: accent, fontWeight: 700, cursor: "pointer" }}
                   onClick={() => setView("today")}
@@ -1059,7 +1524,7 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                       key={q.id}
                       q={q}
                       checked={!!solved[`__q_${q.id}`]}
-                      onCheck={toggleQ}
+                      onCheck={toggleDSA}
                       accent={accent}
                       showCompanies
                       readOnly
@@ -1069,13 +1534,167 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
               </Card>
             );
           })}
+
+          {/* HR patterns section */}
+          {hasHR && (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  margin: "6px 0",
+                }}
+              >
+                <div
+                  style={{ flex: 1, height: 1, background: "var(--border)" }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: "#9b72cf",
+                    padding: "4px 14px",
+                    borderRadius: 99,
+                    background: "#9b72cf18",
+                    border: "1px solid #9b72cf33",
+                  }}
+                >
+                  🎯 HR Interview Questions
+                </span>
+                <div
+                  style={{ flex: 1, height: 1, background: "var(--border)" }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 5,
+                  overflowX: "auto",
+                  paddingBottom: 2,
+                  scrollbarWidth: "none",
+                }}
+              >
+                {["All", ...HR_CATEGORIES_LIST].map((c) => {
+                  const col = HR_CATEGORY_COLORS[c] || "#9b72cf";
+                  const qs =
+                    c === "All"
+                      ? HR_QUESTIONS
+                      : HR_QUESTIONS.filter((q) => q.category === c);
+                  const done = qs.filter((q) => solved[`__hr_${q.id}`]).length;
+                  const isOn = hrCatFilter === c;
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => setHrCatFilter(c)}
+                      style={{
+                        flexShrink: 0,
+                        padding: "5px 10px",
+                        borderRadius: 99,
+                        cursor: "pointer",
+                        border: `1.5px solid ${isOn ? col : "var(--border)"}`,
+                        background: isOn ? col + "18" : "var(--bg3)",
+                        color: isOn ? col : "var(--txt3)",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {c} {done}/{qs.length}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {Object.entries(hrGrouped).map(([cat, qs]) => {
+                const col = HR_CATEGORY_COLORS[cat] || "#888";
+                const done = qs.filter((q) => solved[`__hr_${q.id}`]).length;
+                const pct = qs.length
+                  ? Math.round((done / qs.length) * 100)
+                  : 0;
+                const barCol =
+                  pct < 40 ? "#e05252" : pct > 70 ? "#4caf7d" : "#d4b44a";
+                return (
+                  <Card key={cat} style={{ padding: "12px 14px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 7,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: col,
+                            display: "inline-block",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 800,
+                            color: "var(--txt)",
+                          }}
+                        >
+                          {cat}
+                        </span>
+                        <span style={{ fontSize: 10, color: "var(--txt3)" }}>
+                          {qs.length} questions
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: barCol,
+                          fontFamily: "monospace",
+                        }}
+                      >
+                        {done}/{qs.length}
+                      </span>
+                    </div>
+                    <Bar pct={pct} color={col} height={4} />
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                        marginTop: 10,
+                      }}
+                    >
+                      {sortHRByFrequency(qs).map((q) => (
+                        <HRQuestionRow
+                          key={q.id}
+                          q={q}
+                          checked={!!solved[`__hr_${q.id}`]}
+                          onOpen={setPopupQ}
+                        />
+                      ))}
+                    </div>
+                  </Card>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
 
-      {/* ════════════════ ADD QUESTIONS ════════════════ */}
+      {/* ════ ADD QUESTIONS ════ */}
       {view === "add" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* ── Tier 2: High-freq suggestions ── */}
           <Card>
             <div
               style={{
@@ -1111,7 +1730,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                 {showTier2 ? "Hide" : `Show (${tier2Pending.length})`}
               </button>
             </div>
-
             {tier2Accepted.length > 0 && (
               <div
                 style={{
@@ -1128,7 +1746,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                 {tier2Accepted.length > 1 ? "s" : ""} added to your pool
               </div>
             )}
-
             {showTier2 &&
               (tier2Pending.length === 0 ? (
                 <div
@@ -1178,7 +1795,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
               ))}
           </Card>
 
-          {/* ── Tier 3: Manual add ── */}
           <Card>
             <SectionLabel>➕ Add More Questions</SectionLabel>
             <div
@@ -1187,7 +1803,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
               {tier3Available.length} available · {tier3Added.length} added to
               pool
             </div>
-
             <input
               value={addSearch}
               onChange={(e) => setAddSearch(e.target.value)}
@@ -1205,7 +1820,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                 marginBottom: 8,
               }}
             />
-
             <div
               style={{
                 display: "flex",
@@ -1237,7 +1851,6 @@ export default function PlanTab({ co, daysLeft, setup, solved, setSolved }) {
                 </button>
               ))}
             </div>
-
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {addFiltered.length === 0 && (
                 <div
