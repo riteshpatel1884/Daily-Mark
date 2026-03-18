@@ -11,7 +11,6 @@ import {
 const SB_ACCENT = "#7c5cbf";
 const LS_SETUP = "sb_setup_v2";
 const LS_DONE = "sb_done_v2";
-const LS_NOTES = "sb_notes_v2";
 const LS_STREAK = "sb_streak_v2";
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
@@ -175,16 +174,9 @@ function ResourcePopup({
   done,
   onToggleDone,
   onClose,
-  note,
-  onNoteChange,
   showMarkDone = true,
 }) {
   const col = ML_CATEGORY_COLORS[topic.category] || SB_ACCENT;
-  const [localNote, setLocalNote] = useState(note || "");
-
-  function saveNote() {
-    onNoteChange(topic.id, localNote);
-  }
 
   return (
     <>
@@ -264,7 +256,8 @@ function ResourcePopup({
                     {topic.category}
                   </span>
                   <span style={{ fontSize: 10, color: "var(--txt3)" }}>
-                    ~{topic.estimatedDays}d · {topic.resources.length} resources
+                    ~{topic.estimatedDays}d suggested · {topic.resources.length}{" "}
+                    resources
                   </span>
                 </div>
                 <div
@@ -328,37 +321,11 @@ function ResourcePopup({
             </div>
           </div>
 
-          {/* personal notes */}
-          <div style={{ padding: "14px 18px 0" }}>
-            <Label>My Notes</Label>
-            <textarea
-              value={localNote}
-              onChange={(e) => setLocalNote(e.target.value)}
-              onBlur={saveNote}
-              placeholder="Jot down key concepts, doubts, or what you learned..."
-              rows={3}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                background: "var(--bg3)",
-                border: "1.5px solid var(--border)",
-                borderRadius: 10,
-                padding: "10px 12px",
-                color: "var(--txt)",
-                fontSize: 12,
-                resize: "vertical",
-                outline: "none",
-                lineHeight: 1.5,
-              }}
-            />
-          </div>
-
           {/* mark done — only shown when opened from Today */}
           {showMarkDone && (
             <div style={{ padding: "12px 18px 18px" }}>
               <button
                 onClick={() => {
-                  saveNote();
                   onToggleDone(topic.id);
                   onClose();
                 }}
@@ -384,10 +351,7 @@ function ResourcePopup({
           {!showMarkDone && (
             <div style={{ padding: "12px 18px 18px" }}>
               <button
-                onClick={() => {
-                  saveNote();
-                  onClose();
-                }}
+                onClick={onClose}
                 style={{
                   width: "100%",
                   padding: 10,
@@ -1043,11 +1007,37 @@ function SetupScreen({ onSubmit, savedSetup }) {
             </button>
           </div>
         </div>
-        <p style={{ fontSize: 11, color: "var(--txt3)", margin: "0 0 12px" }}>
+        <p style={{ fontSize: 11, color: "var(--txt3)", margin: "0 0 10px" }}>
           Click a category to toggle all its topics. Tap{" "}
           <strong style={{ color: "var(--txt2)" }}>↗</strong> to see and pick
           individual subtopics.
         </p>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            padding: "8px 11px",
+            background: SB_ACCENT + "0d",
+            border: `1px solid ${SB_ACCENT}28`,
+            borderRadius: 9,
+            marginBottom: 12,
+          }}
+        >
+          <span style={{ fontSize: 13, flexShrink: 0 }}>💡</span>
+          <span
+            style={{ fontSize: 11, color: "var(--txt3)", lineHeight: 1.55 }}
+          >
+            The <strong style={{ color: "var(--txt2)" }}>~Nd</strong> next to
+            each topic is the{" "}
+            <strong style={{ color: "var(--txt2)" }}>
+              suggested ideal days
+            </strong>{" "}
+            to fully cover it at a comfortable pace. Your actual days per topic
+            are auto-calculated from your deadline — if you have extra time,
+            harder topics automatically get more days.
+          </span>
+        </div>
 
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
           {Object.keys(ML_CATEGORY_COLORS).map((cat) => {
@@ -1250,14 +1240,7 @@ function SetupScreen({ onSubmit, savedSetup }) {
 }
 
 // ─── Plan Screen ──────────────────────────────────────────────────────────────
-function PlanScreen({
-  setup,
-  done,
-  onToggleDone,
-  onReset,
-  notes,
-  onNoteChange,
-}) {
+function PlanScreen({ setup, done, onToggleDone, onReset }) {
   const { deadline, selectedCats = [], startDate } = setup;
 
   const selectedTopics = useMemo(
@@ -1270,21 +1253,62 @@ function PlanScreen({
     [setup],
   );
 
-  // Build day plan — 1 topic per day sequentially
+  // Build day plan — if total days available > total topics, spread each topic
+  // proportionally using its estimatedDays weight; otherwise 1 topic per day.
   const dayPlan = useMemo(() => {
     const plan = [];
     const start = new Date(startDate);
+    const totalSpan = Math.max(
+      selectedTopics.length,
+      Math.ceil((new Date(deadline) - new Date(startDate)) / 86400000),
+    );
+    const totalEstDays = selectedTopics.reduce(
+      (s, t) => s + t.estimatedDays,
+      0,
+    );
+
+    // Distribute days weighted by estimatedDays so harder topics get more time.
+    // If totalSpan < topics.length everyone gets 1 day (tight). Otherwise
+    // each topic gets at least 1 day + proportional share of extra days.
+    const rawAllocs = selectedTopics.map((t) =>
+      totalSpan <= selectedTopics.length
+        ? 1
+        : Math.max(1, Math.round((t.estimatedDays / totalEstDays) * totalSpan)),
+    );
+    // Fix rounding drift so sum === totalSpan
+    let allocSum = rawAllocs.reduce((a, b) => a + b, 0);
+    let fi = 0;
+    while (allocSum < totalSpan) {
+      rawAllocs[fi % rawAllocs.length]++;
+      allocSum++;
+      fi++;
+    }
+    while (allocSum > totalSpan && allocSum > selectedTopics.length) {
+      const maxIdx = rawAllocs.reduce(
+        (best, v, j) => (v > rawAllocs[best] ? j : best),
+        0,
+      );
+      if (rawAllocs[maxIdx] <= 1) break;
+      rawAllocs[maxIdx]--;
+      allocSum--;
+    }
+
+    let dayOffset = 0;
     selectedTopics.forEach((topic, idx) => {
+      const allocDays = rawAllocs[idx];
       const date = new Date(start);
-      date.setDate(date.getDate() + idx);
+      date.setDate(date.getDate() + dayOffset);
       plan.push({
         dayNum: idx + 1,
         date: date.toISOString().split("T")[0],
+        allocDays,
+        endOffset: dayOffset + allocDays - 1,
         topic,
       });
+      dayOffset += allocDays;
     });
     return plan;
-  }, [selectedTopics, startDate]);
+  }, [selectedTopics, startDate, deadline]);
 
   const totalDaysSpan = useMemo(
     () =>
@@ -1296,7 +1320,27 @@ function PlanScreen({
   );
 
   const todayStr = new Date().toISOString().split("T")[0];
-  const todayEntry = dayPlan.find((d) => d.date === todayStr);
+  // Find today's entry — topic spans allocDays so match by date range
+  const todayEntry = useMemo(() => {
+    const start = new Date(startDate);
+    return (
+      dayPlan.find((d) => {
+        const topicStart = new Date(start);
+        topicStart.setDate(
+          topicStart.getDate() +
+            dayPlan
+              .slice(0, dayPlan.indexOf(d))
+              .reduce((s, x) => s + x.allocDays, 0),
+        );
+        const topicEnd = new Date(topicStart);
+        topicEnd.setDate(topicEnd.getDate() + d.allocDays - 1);
+        return (
+          todayStr >= topicStart.toISOString().split("T")[0] &&
+          todayStr <= topicEnd.toISOString().split("T")[0]
+        );
+      }) || null
+    );
+  }, [dayPlan, todayStr, startDate]);
   const daysLeft = Math.max(
     0,
     Math.ceil((new Date(deadline) - new Date()) / 86400000),
@@ -1349,8 +1393,6 @@ function PlanScreen({
           done={!!done[popupTopic.id]}
           onToggleDone={onToggleDone}
           onClose={() => setPopupTopic(null)}
-          note={notes[popupTopic.id] || ""}
-          onNoteChange={onNoteChange}
           showMarkDone={popupIsToday}
         />
       )}
@@ -1529,7 +1571,9 @@ function PlanScreen({
             <span
               style={{ fontSize: 11, fontWeight: 800, color: "var(--txt)" }}
             >
-              1 topic/day
+              {dayPlan.length > 0 && dayPlan[0].allocDays > 1
+                ? `~${Math.round(dayPlan.reduce((s, d) => s + d.allocDays, 0) / dayPlan.length)}d/topic`
+                : "1 topic/day"}
             </span>
           </div>
 
@@ -1674,7 +1718,6 @@ function PlanScreen({
               todayTopics.map((t) => {
                 const col = ML_CATEGORY_COLORS[t.category] || SB_ACCENT;
                 const isDone = !!done[t.id];
-                const hasNote = !!notes[t.id]?.trim();
                 return (
                   <div
                     key={t.id}
@@ -1760,17 +1803,6 @@ function PlanScreen({
                         <span style={{ fontSize: 10, color: "var(--txt3)" }}>
                           ~{t.estimatedDays}d · {t.resources.length} resources
                         </span>
-                        {hasNote && (
-                          <span
-                            style={{
-                              fontSize: 9,
-                              color: "#d4b44a",
-                              fontWeight: 700,
-                            }}
-                          >
-                            📝 note
-                          </span>
-                        )}
                       </div>
                     </div>
                     <span
@@ -1884,7 +1916,7 @@ function PlanScreen({
             }}
           >
             <span style={{ fontWeight: 700, color: "var(--txt2)" }}>Tip: </span>
-            Tap the topic to open resources, write notes, and mark it done.
+            Tap the topic to open resources and mark it done.
           </div>
         </SBCard>
       )}
@@ -1927,15 +1959,26 @@ function PlanScreen({
             ))}
           </div>
 
-          {dayPlan.map((day) => {
-            const isToday = day.date === todayStr;
-            const isPast = day.date < todayStr;
-            const isFuture = day.date > todayStr;
+          {dayPlan.map((day, planIdx) => {
+            // compute start/end dates from cumulative offsets
+            const baseDate = new Date(startDate);
+            const offsetSoFar = dayPlan
+              .slice(0, planIdx)
+              .reduce((s, x) => s + x.allocDays, 0);
+            const topicStart = new Date(baseDate);
+            topicStart.setDate(topicStart.getDate() + offsetSoFar);
+            const topicEnd = new Date(topicStart);
+            topicEnd.setDate(topicEnd.getDate() + day.allocDays - 1);
+            const topicStartStr = topicStart.toISOString().split("T")[0];
+            const topicEndStr = topicEnd.toISOString().split("T")[0];
+
+            const isToday =
+              todayStr >= topicStartStr && todayStr <= topicEndStr;
+            const isPast = topicEndStr < todayStr;
+            const isFuture = topicStartStr > todayStr;
             const isDone = !!done[day.topic.id];
-            const hasNote = !!notes[day.topic.id]?.trim();
             const col = ML_CATEGORY_COLORS[day.topic.category] || SB_ACCENT;
 
-            // day card border & tint
             const cardBorder = isToday
               ? `1.5px solid ${SB_ACCENT}55`
               : isDone
@@ -1948,8 +1991,6 @@ function PlanScreen({
               : isDone
                 ? "#4caf7d06"
                 : "var(--bg3)";
-
-            // day num pill colour
             const pillCol = isToday
               ? SB_ACCENT
               : isDone
@@ -1982,15 +2023,15 @@ function PlanScreen({
                   transition: "all .15s",
                 }}
               >
-                {/* day num pill (left) */}
+                {/* left: topic number + dates */}
                 <div
                   style={{
                     flexShrink: 0,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: 3,
-                    minWidth: 44,
+                    gap: 2,
+                    minWidth: 52,
                   }}
                 >
                   <span
@@ -2005,17 +2046,41 @@ function PlanScreen({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    Day {day.dayNum}
+                    Topic {day.dayNum}
                   </span>
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 8,
                       color: "var(--txt3)",
-                      whiteSpace: "nowrap",
+                      textAlign: "center",
+                      lineHeight: 1.5,
                     }}
                   >
-                    {day.date}
+                    {day.allocDays > 1 ? (
+                      <>
+                        {topicStartStr}
+                        <br />
+                        {topicEndStr}
+                      </>
+                    ) : (
+                      topicStartStr
+                    )}
                   </span>
+                  {day.allocDays > 1 && (
+                    <span
+                      style={{
+                        fontSize: 8,
+                        fontWeight: 800,
+                        color: SB_ACCENT,
+                        background: SB_ACCENT + "15",
+                        border: `1px solid ${SB_ACCENT}28`,
+                        padding: "1px 5px",
+                        borderRadius: 99,
+                      }}
+                    >
+                      {day.allocDays}d
+                    </span>
+                  )}
                   {isToday && (
                     <span
                       style={{
@@ -2067,30 +2132,14 @@ function PlanScreen({
                       {day.topic.category}
                     </span>
                     <span style={{ fontSize: 9, color: "var(--txt3)" }}>
+                      ~{day.topic.estimatedDays}d suggested ·{" "}
                       {day.topic.resources.length} resources
                     </span>
-                    {hasNote && (
-                      <span
-                        style={{
-                          fontSize: 9,
-                          color: "#d4b44a",
-                          fontWeight: 700,
-                        }}
-                      >
-                        📝
-                      </span>
-                    )}
                   </div>
                 </div>
 
-                {/* right side indicator */}
-                <div
-                  style={{
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
+                {/* right indicator */}
+                <div style={{ flexShrink: 0 }}>
                   {isDone ? (
                     <span
                       style={{
@@ -2129,7 +2178,6 @@ function PlanScreen({
 export default function SkillBuilder() {
   const [setup, setSetup] = useState(() => lsGet(LS_SETUP, null));
   const [done, setDone] = useState(() => lsGet(LS_DONE, {}));
-  const [notes, setNotes] = useState(() => lsGet(LS_NOTES, {}));
 
   // persist setup
   useEffect(() => {
@@ -2139,15 +2187,11 @@ export default function SkillBuilder() {
   useEffect(() => {
     lsSet(LS_DONE, done);
   }, [done]);
-  // persist notes
-  useEffect(() => {
-    lsSet(LS_NOTES, notes);
-  }, [notes]);
 
   function handleSetup(data) {
     const s = { ...data, startDate: new Date().toISOString().split("T")[0] };
     setSetup(s);
-    // don't wipe done/notes on re-setup so progress isn't lost on minor changes
+    // don't wipe done on re-setup so progress isn't lost
   }
 
   function handleToggleDone(topicId) {
@@ -2159,21 +2203,11 @@ export default function SkillBuilder() {
     });
   }
 
-  function handleNoteChange(topicId, text) {
-    setNotes((prev) => {
-      const next = { ...prev, [topicId]: text };
-      lsSet(LS_NOTES, next);
-      return next;
-    });
-  }
-
   function handleReset() {
     setSetup(null);
     setDone({});
-    setNotes({});
     lsSet(LS_SETUP, null);
     lsSet(LS_DONE, {});
-    lsSet(LS_NOTES, {});
     lsSet(LS_STREAK, { count: 0, lastDate: "" });
   }
 
@@ -2188,8 +2222,6 @@ export default function SkillBuilder() {
       done={done}
       onToggleDone={handleToggleDone}
       onReset={handleReset}
-      notes={notes}
-      onNoteChange={handleNoteChange}
     />
   );
 }
