@@ -547,19 +547,326 @@ function CategoryPopup({ selectedTopics, done, onClose }) {
   );
 }
 
+// ─── Subtopics Popup — shown when user clicks "i" on a category pill ─────────
+function SubtopicsPopup({
+  cat,
+  topics,
+  selected,
+  onToggleTopic,
+  onSelectAll,
+  onClearAll,
+  onClose,
+}) {
+  const col = ML_CATEGORY_COLORS[cat] || SB_ACCENT;
+  const allOn = topics.every((t) => selected.has(t.id));
+  const someOn = topics.some((t) => selected.has(t.id));
+  const doneCount = topics.filter((t) => selected.has(t.id)).length;
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1000,
+          background: "rgba(0,0,0,0.55)",
+        }}
+      />
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1001,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            pointerEvents: "all",
+            width: "100%",
+            maxWidth: 480,
+            maxHeight: "82vh",
+            overflowY: "auto",
+            background: "var(--bg)",
+            border: `1.5px solid ${col}55`,
+            borderRadius: 16,
+          }}
+        >
+          {/* sticky header */}
+          <div
+            style={{
+              padding: "16px 18px 14px",
+              borderBottom: "1px solid var(--border)",
+              position: "sticky",
+              top: 0,
+              background: "var(--bg)",
+              zIndex: 1,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: col,
+                    flexShrink: 0,
+                    display: "inline-block",
+                  }}
+                />
+                <span
+                  style={{ fontSize: 15, fontWeight: 800, color: "var(--txt)" }}
+                >
+                  {cat}
+                </span>
+                <span style={{ fontSize: 10, color: "var(--txt3)" }}>
+                  {doneCount}/{topics.length} selected
+                </span>
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  flexShrink: 0,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg3)",
+                  color: "var(--txt3)",
+                  cursor: "pointer",
+                  fontSize: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* select all / clear */}
+            <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
+              <button
+                onClick={onSelectAll}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  borderRadius: 8,
+                  border: `1px solid ${col}44`,
+                  background: allOn ? col + "18" : "var(--bg3)",
+                  color: allOn ? col : "var(--txt3)",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all .15s",
+                }}
+              >
+                ✓ Select All
+              </button>
+              <button
+                onClick={onClearAll}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg3)",
+                  color: "var(--txt3)",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                ✕ Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* topic list */}
+          <div
+            style={{
+              padding: "12px 18px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 7,
+            }}
+          >
+            {topics.map((t, idx) => {
+              const isOn = selected.has(t.id);
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => onToggleTopic(t.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    padding: "10px 13px",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    border: `1.5px solid ${isOn ? col + "55" : "var(--border)"}`,
+                    background: isOn ? col + "10" : "var(--bg3)",
+                    transition: "all .15s",
+                  }}
+                >
+                  {/* checkbox */}
+                  <div
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 5,
+                      flexShrink: 0,
+                      marginTop: 1,
+                      border: `2px solid ${isOn ? col : "var(--border)"}`,
+                      background: isOn ? col : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all .15s",
+                    }}
+                  >
+                    {isOn && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path
+                          d="M1 4L3.5 6.5L9 1"
+                          stroke="#fff"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* day badge + title */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flexWrap: "wrap",
+                        marginBottom: 3,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 800,
+                          color: "var(--txt3)",
+                          background: "var(--bg2)",
+                          border: "1px solid var(--border)",
+                          padding: "1px 6px",
+                          borderRadius: 99,
+                        }}
+                      >
+                        Topic {idx + 1}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: isOn ? "var(--txt)" : "var(--txt2)",
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        {t.title}
+                      </span>
+                    </div>
+                    {/* description */}
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--txt3)",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      {t.description}
+                    </div>
+                    {/* meta row */}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        marginTop: 5,
+                        alignItems: "center",
+                      }}
+                    >
+                      <span style={{ fontSize: 9, color: "var(--txt3)" }}>
+                        ~{t.estimatedDays}d study
+                      </span>
+                      <span style={{ fontSize: 9, color: "var(--txt3)" }}>
+                        {t.resources.length} resources
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* done button */}
+          <div style={{ padding: "0 18px 18px" }}>
+            <button
+              onClick={onClose}
+              style={{
+                width: "100%",
+                padding: 11,
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 800,
+                background: col,
+                color: "#fff",
+              }}
+            >
+              Done — {doneCount} topic{doneCount !== 1 ? "s" : ""} selected from{" "}
+              {cat}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Setup Screen ─────────────────────────────────────────────────────────────
 function SetupScreen({ onSubmit, savedSetup }) {
-  // No auto-selection — user must actively pick
-  const [selectedCats, setSelectedCats] = useState(
-    savedSetup ? new Set(savedSetup.selectedCats) : new Set(),
-  );
+  // Track individual topic IDs selected (not just categories)
+  const [selectedIds, setSelectedIds] = useState(() => {
+    if (savedSetup?.selectedIds) return new Set(savedSetup.selectedIds);
+    // backward-compat: if old setup had selectedCats, pre-fill
+    if (savedSetup?.selectedCats) {
+      return new Set(
+        ML_TOPICS.filter((t) =>
+          savedSetup.selectedCats.includes(t.category),
+        ).map((t) => t.id),
+      );
+    }
+    return new Set();
+  });
   const [deadline, setDeadline] = useState(savedSetup?.deadline || "");
+  const [popupCat, setPopupCat] = useState(null); // which category popup is open
 
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 1);
   const minStr = minDate.toISOString().slice(0, 10);
 
-  const selectedTopics = ML_TOPICS.filter((t) => selectedCats.has(t.category));
+  const selectedTopics = ML_TOPICS.filter((t) => selectedIds.has(t.id));
   const daysLeft = deadline
     ? Math.max(1, Math.ceil((new Date(deadline) - new Date()) / 86400000))
     : null;
@@ -574,26 +881,68 @@ function SetupScreen({ onSubmit, savedSetup }) {
       : daysLeft < 45
         ? "#d4b44a"
         : "#4caf7d";
-  const canSubmit = deadline && selectedCats.size > 0;
+  const canSubmit = deadline && selectedIds.size > 0;
 
+  // Category-level helpers
   function toggleCat(cat) {
-    setSelectedCats((prev) => {
+    const catTopics = ML_TOPICS.filter((t) => t.category === cat);
+    const allOn = catTopics.every((t) => selectedIds.has(t.id));
+    setSelectedIds((prev) => {
       const n = new Set(prev);
-      if (n.has(cat)) n.delete(cat);
-      else n.add(cat);
+      catTopics.forEach((t) => (allOn ? n.delete(t.id) : n.add(t.id)));
       return n;
     });
   }
 
   function selectAll() {
-    setSelectedCats(new Set(Object.keys(ML_CATEGORY_COLORS)));
+    setSelectedIds(new Set(ML_TOPICS.map((t) => t.id)));
   }
   function clearAll() {
-    setSelectedCats(new Set());
+    setSelectedIds(new Set());
+  }
+
+  // Per-topic toggle (used inside popup)
+  function toggleTopic(id) {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  // Select / clear all topics inside a category (used inside popup)
+  function selectCatAll(cat) {
+    const ids = ML_TOPICS.filter((t) => t.category === cat).map((t) => t.id);
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      ids.forEach((id) => n.add(id));
+      return n;
+    });
+  }
+  function clearCatAll(cat) {
+    const ids = ML_TOPICS.filter((t) => t.category === cat).map((t) => t.id);
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      ids.forEach((id) => n.delete(id));
+      return n;
+    });
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* subtopics popup */}
+      {popupCat && (
+        <SubtopicsPopup
+          cat={popupCat}
+          topics={ML_TOPICS.filter((t) => t.category === popupCat)}
+          selected={selectedIds}
+          onToggleTopic={toggleTopic}
+          onSelectAll={() => selectCatAll(popupCat)}
+          onClearAll={() => clearCatAll(popupCat)}
+          onClose={() => setPopupCat(null)}
+        />
+      )}
+
       {/* Hero */}
       <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
         <div
@@ -695,85 +1044,92 @@ function SetupScreen({ onSubmit, savedSetup }) {
           </div>
         </div>
         <p style={{ fontSize: 11, color: "var(--txt3)", margin: "0 0 12px" }}>
-          Topics run from maths basics → advanced ML. Pick only what you need.
+          Click a category to toggle all its topics. Tap{" "}
+          <strong style={{ color: "var(--txt2)" }}>↗</strong> to see and pick
+          individual subtopics.
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
           {Object.keys(ML_CATEGORY_COLORS).map((cat) => {
             const col = ML_CATEGORY_COLORS[cat];
-            const on = selectedCats.has(cat);
-            const topics = ML_TOPICS.filter((t) => t.category === cat);
-            const totalDaysEst = getTotalDays(topics);
+            const catTopics = ML_TOPICS.filter((t) => t.category === cat);
+            const selCount = catTopics.filter((t) =>
+              selectedIds.has(t.id),
+            ).length;
+            const allOn = selCount === catTopics.length;
+            const someOn = selCount > 0 && !allOn;
+
             return (
-              <button
+              <div
                 key={cat}
-                onClick={() => toggleCat(cat)}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "10px 13px",
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  border: `1.5px solid ${on ? col : "var(--border)"}`,
-                  background: on ? col + "12" : "var(--bg3)",
+                  borderRadius: 99,
+                  border: `1.5px solid ${selCount > 0 ? col : "var(--border)"}`,
+                  background: allOn
+                    ? col + "18"
+                    : someOn
+                      ? col + "0e"
+                      : "var(--bg3)",
+                  overflow: "hidden",
                   transition: "all .15s",
-                  textAlign: "left",
                 }}
               >
-                {/* checkbox */}
-                <div
+                {/* main pill — toggles whole category */}
+                <button
+                  onClick={() => toggleCat(cat)}
                   style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 5,
-                    flexShrink: 0,
-                    border: `2px solid ${on ? col : "var(--border)"}`,
-                    background: on ? col : "transparent",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all .15s",
-                  }}
-                >
-                  {on && (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path
-                        d="M1 4L3.5 6.5L9 1"
-                        stroke="#fff"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </div>
-                {/* dot */}
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: col,
-                    flexShrink: 0,
-                  }}
-                />
-                {/* label */}
-                <span
-                  style={{
-                    flex: 1,
-                    fontSize: 13,
+                    gap: 5,
+                    padding: "6px 10px 6px 13px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: selCount > 0 ? col : "var(--txt3)",
+                    fontSize: 11,
                     fontWeight: 700,
-                    color: on ? "var(--txt)" : "var(--txt2)",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {cat}
-                </span>
-                {/* meta */}
-                <span style={{ fontSize: 10, color: "var(--txt3)" }}>
-                  {topics.length} topics · ~{totalDaysEst}d
-                </span>
-              </button>
+                  {/* count badge */}
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 800,
+                      padding: "1px 5px",
+                      borderRadius: 99,
+                      background: selCount > 0 ? col + "28" : "var(--bg2)",
+                      color: selCount > 0 ? col : "var(--txt3)",
+                      border: `1px solid ${selCount > 0 ? col + "44" : "var(--border)"}`,
+                    }}
+                  >
+                    {selCount}/{catTopics.length}
+                  </span>
+                </button>
+                {/* info button — opens subtopics popup */}
+                <button
+                  onClick={() => setPopupCat(cat)}
+                  style={{
+                    padding: "6px 10px 6px 4px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: selCount > 0 ? col : "var(--txt3)",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    opacity: 0.75,
+                    transition: "opacity .15s",
+                  }}
+                  title={`See subtopics in ${cat}`}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.75")}
+                >
+                  ↗
+                </button>
+              </div>
             );
           })}
         </div>
@@ -861,7 +1217,13 @@ function SetupScreen({ onSubmit, savedSetup }) {
       {/* Submit */}
       <button
         disabled={!canSubmit}
-        onClick={() => onSubmit({ deadline, selectedCats: [...selectedCats] })}
+        onClick={() =>
+          onSubmit({
+            deadline,
+            selectedCats: [...new Set(selectedTopics.map((t) => t.category))],
+            selectedIds: [...selectedIds],
+          })
+        }
         style={{
           width: "100%",
           padding: 15,
@@ -896,11 +1258,16 @@ function PlanScreen({
   notes,
   onNoteChange,
 }) {
-  const { deadline, selectedCats, startDate } = setup;
+  const { deadline, selectedCats = [], startDate } = setup;
 
   const selectedTopics = useMemo(
-    () => ML_TOPICS.filter((t) => selectedCats.includes(t.category)),
-    [selectedCats],
+    () =>
+      ML_TOPICS.filter((t) =>
+        setup.selectedIds
+          ? setup.selectedIds.includes(t.id)
+          : setup.selectedCats.includes(t.category),
+      ),
+    [setup],
   );
 
   // Build day plan — 1 topic per day sequentially
