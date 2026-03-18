@@ -12,7 +12,8 @@ const LS_SETUP = "sb_setup_v2";
 const LS_DONE = "sb_done_v2";
 const LS_STREAK = "sb_streak_v2";
 
-// ─── localStorage helpers ─────────────────────────────────────────────────────
+// ─── localStorage helpers
+
 function lsGet(key, fallback) {
   try {
     const v = localStorage.getItem(key);
