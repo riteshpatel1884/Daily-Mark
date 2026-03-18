@@ -6,6 +6,7 @@ import BottomNav from "@/Components/Navigations/bottomnav";
 import SettingsView from "@/Components/Setting/settingView";
 import NotificationBanner from "@/Components/Notification/Notificationbanner";
 import PlacementIntelligencePlatform from "@/Components/Placement/Placementintelligence";
+import SkillBuilder from "@/Components/Skill Builder/Skillbuilder";
 function App() {
   const { view } = useApp();
   return (
@@ -13,7 +14,7 @@ function App() {
       <Sidebar />
       <div className="scroller">
         <NotificationBanner />
-       
+        {view === "skillBuilder" && <SkillBuilder />}
         {view === "settings" && <SettingsView />}
         {view === "hireLab" && <PlacementIntelligencePlatform />}
       </div>

@@ -1,22 +1,48 @@
-// SkillBuilder.jsx — ML Skill Builder Section
-// Completely separate from HireLab. No company, no interview date logic.
-// Own state, own storage keys (__sb_done_<id>, __sb_setup)
-// Two screens: SetupScreen → PlanScreen
-
+// SkillBuilder.jsx — ML Skill Builder
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ML_TOPICS,
   ML_CATEGORY_COLORS,
   RESOURCE_TYPE_META,
-  groupTopicsByCategory,
   getTotalDays,
 } from "../../lib/data/Skill Builder/ml";
 
-// ─── colour accent for this section ──────────────────────────────────────────
-const SB_ACCENT = "#7c5cbf"; // distinct purple — different from HireLab blues
+const SB_ACCENT = "#7c5cbf";
+const LS_SETUP = "sb_setup_v2";
+const LS_DONE = "sb_done_v2";
+const LS_NOTES = "sb_notes_v2";
+const LS_STREAK = "sb_streak_v2";
 
-// ─── shared primitives ────────────────────────────────────────────────────────
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+function lsGet(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function lsSet(key, val) {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch {}
+}
+
+// ─── streak helper ────────────────────────────────────────────────────────────
+function updateStreak(todayStr) {
+  const s = lsGet(LS_STREAK, { count: 0, lastDate: "" });
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yStr = yesterday.toISOString().split("T")[0];
+  if (s.lastDate === todayStr) return s; // already updated today
+  const newCount = s.lastDate === yStr ? s.count + 1 : 1;
+  const next = { count: newCount, lastDate: todayStr };
+  lsSet(LS_STREAK, next);
+  return next;
+}
+
+// ─── primitives ───────────────────────────────────────────────────────────────
 function SBBar({ pct, color = SB_ACCENT, height = 5 }) {
   return (
     <div
@@ -39,7 +65,6 @@ function SBBar({ pct, color = SB_ACCENT, height = 5 }) {
     </div>
   );
 }
-
 function SBCard({ children, style = {} }) {
   return (
     <div className="card" style={style}>
@@ -47,8 +72,7 @@ function SBCard({ children, style = {} }) {
     </div>
   );
 }
-
-function Label({ children }) {
+function Label({ children, style = {} }) {
   return (
     <div
       style={{
@@ -58,6 +82,7 @@ function Label({ children }) {
         letterSpacing: ".08em",
         color: "var(--txt3)",
         marginBottom: 8,
+        ...style,
       }}
     >
       {children}
@@ -65,31 +90,7 @@ function Label({ children }) {
   );
 }
 
-function LevelBadge({ level }) {
-  const map = {
-    beginner: ["#4caf7d", "Beginner"],
-    intermediate: ["#d4b44a", "Intermediate"],
-    advanced: ["#e05252", "Advanced"],
-  };
-  const [col, label] = map[level] || ["#888", level];
-  return (
-    <span
-      style={{
-        fontSize: 9,
-        fontWeight: 800,
-        padding: "2px 7px",
-        borderRadius: 99,
-        background: col + "22",
-        color: col,
-        letterSpacing: ".04em",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-// ─── Resource chip ────────────────────────────────────────────────────────────
+// ─── Resource chip ─────────────────────────────────────────────────────────────
 function ResourceChip({ r }) {
   const meta = RESOURCE_TYPE_META[r.type] || {
     label: r.type,
@@ -110,7 +111,7 @@ function ResourceChip({ r }) {
         background: "var(--bg3)",
         border: `1px solid ${meta.color}33`,
         textDecoration: "none",
-        transition: "all .15s",
+        transition: "border-color .15s",
       }}
       onMouseEnter={(e) =>
         (e.currentTarget.style.borderColor = meta.color + "88")
@@ -119,7 +120,6 @@ function ResourceChip({ r }) {
         (e.currentTarget.style.borderColor = meta.color + "33")
       }
     >
-      {/* type badge */}
       <span
         style={{
           flexShrink: 0,
@@ -136,7 +136,6 @@ function ResourceChip({ r }) {
       >
         {meta.icon} {meta.label}
       </span>
-      {/* text */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -170,255 +169,404 @@ function ResourceChip({ r }) {
   );
 }
 
-// ─── Topic Row ─────────────────────────────────────────────────────────────────
-// Clicking expands to show resources inline
-function TopicRow({ topic, done, onToggleDone, dayNum = null }) {
-  const [expanded, setExpanded] = useState(false);
+// ─── Resource Popup — shown from Today only, has Mark Done ───────────────────
+function ResourcePopup({
+  topic,
+  done,
+  onToggleDone,
+  onClose,
+  note,
+  onNoteChange,
+  showMarkDone = true,
+}) {
   const col = ML_CATEGORY_COLORS[topic.category] || SB_ACCENT;
+  const [localNote, setLocalNote] = useState(note || "");
+
+  function saveNote() {
+    onNoteChange(topic.id, localNote);
+  }
 
   return (
-    <div
-      style={{
-        borderRadius: 12,
-        border: `1px solid ${done ? col + "44" : "var(--border)"}`,
-        background: done ? col + "08" : "var(--bg3)",
-        overflow: "hidden",
-        transition: "all .15s",
-      }}
-    >
-      {/* header row */}
+    <>
       <div
-        onClick={() => setExpanded((e) => !e)}
+        onClick={onClose}
         style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1000,
+          background: "rgba(0,0,0,0.55)",
+        }}
+      />
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1001,
           display: "flex",
-          alignItems: "flex-start",
-          gap: 10,
-          padding: "11px 13px",
-          cursor: "pointer",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+          pointerEvents: "none",
         }}
       >
-        {/* done indicator */}
         <div
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleDone(topic.id);
-          }}
           style={{
-            width: 18,
-            height: 18,
-            borderRadius: 5,
-            flexShrink: 0,
-            marginTop: 2,
-            border: `2px solid ${done ? col : "var(--border)"}`,
-            background: done ? col : "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "all .15s",
-            cursor: "pointer",
+            pointerEvents: "all",
+            width: "100%",
+            maxWidth: 520,
+            maxHeight: "88vh",
+            overflowY: "auto",
+            background: "var(--bg)",
+            border: `1.5px solid ${col}44`,
+            borderRadius: 16,
           }}
         >
-          {done && (
-            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-              <path
-                d="M1 4L3.5 6.5L9 1"
-                stroke="#fff"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* sticky header */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flexWrap: "wrap",
-              marginBottom: 4,
+              padding: "16px 18px 14px",
+              borderBottom: "1px solid var(--border)",
+              position: "sticky",
+              top: 0,
+              background: "var(--bg)",
+              zIndex: 1,
             }}
           >
-            {dayNum && (
-              <span
-                style={{
-                  fontSize: 9,
-                  fontWeight: 800,
-                  color: SB_ACCENT,
-                  background: SB_ACCENT + "18",
-                  border: `1px solid ${SB_ACCENT}33`,
-                  padding: "1px 7px",
-                  borderRadius: 99,
-                }}
-              >
-                Day {dayNum}
-              </span>
-            )}
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: done ? "var(--txt3)" : "var(--txt)",
-                textDecoration: done ? "line-through" : "none",
-                lineHeight: 1.3,
-              }}
-            >
-              {topic.title}
-            </span>
-            <LevelBadge level={topic.level} />
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                padding: "2px 7px",
-                borderRadius: 99,
-                background: col + "18",
-                color: col,
-                border: `1px solid ${col}33`,
-              }}
-            >
-              {topic.category}
-            </span>
-            <span style={{ fontSize: 10, color: "var(--txt3)" }}>
-              ~{topic.estimatedDays} day{topic.estimatedDays !== 1 ? "s" : ""}
-            </span>
-            <span style={{ fontSize: 10, color: "var(--txt3)" }}>
-              {topic.resources.length} resources
-            </span>
-          </div>
-
-          {!expanded && (
             <div
               style={{
-                fontSize: 11,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    marginBottom: 5,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 800,
+                      padding: "2px 8px",
+                      borderRadius: 99,
+                      background: col + "22",
+                      color: col,
+                      border: `1px solid ${col}44`,
+                    }}
+                  >
+                    {topic.category}
+                  </span>
+                  <span style={{ fontSize: 10, color: "var(--txt3)" }}>
+                    ~{topic.estimatedDays}d · {topic.resources.length} resources
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: "var(--txt)",
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {topic.title}
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  flexShrink: 0,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg3)",
+                  color: "var(--txt3)",
+                  cursor: "pointer",
+                  fontSize: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* description */}
+          <div style={{ padding: "12px 18px 0" }}>
+            <div
+              style={{
+                fontSize: 12,
                 color: "var(--txt3)",
-                marginTop: 5,
-                lineHeight: 1.5,
+                lineHeight: 1.6,
+                padding: "8px 10px",
+                background: "var(--bg3)",
+                borderRadius: 8,
+                borderLeft: `2px solid ${col}88`,
               }}
             >
               {topic.description}
             </div>
+          </div>
+
+          {/* resources */}
+          <div style={{ padding: "14px 18px 0" }}>
+            <Label>Best Resources to Study</Label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {topic.resources.map((r, i) => (
+                <ResourceChip key={i} r={r} />
+              ))}
+            </div>
+          </div>
+
+          {/* personal notes */}
+          <div style={{ padding: "14px 18px 0" }}>
+            <Label>My Notes</Label>
+            <textarea
+              value={localNote}
+              onChange={(e) => setLocalNote(e.target.value)}
+              onBlur={saveNote}
+              placeholder="Jot down key concepts, doubts, or what you learned..."
+              rows={3}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                background: "var(--bg3)",
+                border: "1.5px solid var(--border)",
+                borderRadius: 10,
+                padding: "10px 12px",
+                color: "var(--txt)",
+                fontSize: 12,
+                resize: "vertical",
+                outline: "none",
+                lineHeight: 1.5,
+              }}
+            />
+          </div>
+
+          {/* mark done — only shown when opened from Today */}
+          {showMarkDone && (
+            <div style={{ padding: "12px 18px 18px" }}>
+              <button
+                onClick={() => {
+                  saveNote();
+                  onToggleDone(topic.id);
+                  onClose();
+                }}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 10,
+                  border: done ? "1.5px solid var(--border)" : "none",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  background: done ? "var(--bg3)" : col,
+                  color: done ? "var(--txt3)" : "#fff",
+                  transition: "all .15s",
+                }}
+              >
+                {done ? "✓ Completed — Click to Undo" : "Mark as Completed"}
+              </button>
+            </div>
+          )}
+
+          {/* view-only footer for All Topics */}
+          {!showMarkDone && (
+            <div style={{ padding: "12px 18px 18px" }}>
+              <button
+                onClick={() => {
+                  saveNote();
+                  onClose();
+                }}
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 10,
+                  border: "1.5px solid var(--border)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: "var(--bg3)",
+                  color: "var(--txt2)",
+                }}
+              >
+                Close
+              </button>
+            </div>
           )}
         </div>
-
-        {/* expand toggle */}
-        <div
-          style={{
-            flexShrink: 0,
-            width: 22,
-            height: 22,
-            borderRadius: 6,
-            border: "1px solid var(--border)",
-            background: "var(--bg2)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--txt3)",
-            fontSize: 12,
-            fontWeight: 700,
-            transition: "transform .2s",
-            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-        >
-          ↓
-        </div>
       </div>
+    </>
+  );
+}
 
-      {/* expanded resources */}
-      {expanded && (
+// ─── Category Progress Popup ──────────────────────────────────────────────────
+function CategoryPopup({ selectedTopics, done, onClose }) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1000,
+          background: "rgba(0,0,0,0.55)",
+        }}
+      />
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1001,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+          pointerEvents: "none",
+        }}
+      >
         <div
           style={{
-            borderTop: "1px solid var(--border)",
-            padding: "10px 13px 13px",
+            pointerEvents: "all",
+            width: "100%",
+            maxWidth: 440,
+            maxHeight: "80vh",
+            overflowY: "auto",
+            background: "var(--bg)",
+            border: `1.5px solid ${SB_ACCENT}44`,
+            borderRadius: 16,
           }}
         >
           <div
             style={{
-              fontSize: 11,
-              color: "var(--txt3)",
-              marginBottom: 8,
-              lineHeight: 1.5,
+              padding: "16px 18px 14px",
+              borderBottom: "1px solid var(--border)",
+              position: "sticky",
+              top: 0,
+              background: "var(--bg)",
+              zIndex: 1,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            {topic.description}
+            <span
+              style={{ fontSize: 14, fontWeight: 800, color: "var(--txt)" }}
+            >
+              Progress by Category
+            </span>
+            <button
+              onClick={onClose}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: "var(--bg3)",
+                color: "var(--txt3)",
+                cursor: "pointer",
+                fontSize: 15,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+              }}
+            >
+              ✕
+            </button>
           </div>
-          <Label>Best Resources to Study</Label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {topic.resources.map((r, i) => (
-              <ResourceChip key={i} r={r} />
-            ))}
-          </div>
-          {/* mark done button inside expanded */}
-          <button
-            onClick={() => onToggleDone(topic.id)}
+          <div
             style={{
-              width: "100%",
-              marginTop: 12,
-              padding: "10px",
-              borderRadius: 9,
-              border: "none",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 800,
-              background: done ? "var(--bg3)" : col,
-              color: done ? "var(--txt3)" : "#fff",
-              transition: "all .15s",
+              padding: "14px 18px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
             }}
           >
-            {done ? "✓ Completed — Click to Undo" : "Mark Topic as Completed"}
-          </button>
+            {Object.keys(ML_CATEGORY_COLORS).map((cat) => {
+              const col = ML_CATEGORY_COLORS[cat];
+              const qs = selectedTopics.filter((t) => t.category === cat);
+              if (!qs.length) return null;
+              const d = qs.filter((t) => done[t.id]).length;
+              const p = Math.round((d / qs.length) * 100);
+              return (
+                <div key={cat}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 5,
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 7 }}
+                    >
+                      <span
+                        style={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: "50%",
+                          background: col,
+                          display: "inline-block",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "var(--txt2)",
+                        }}
+                      >
+                        {cat}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: col }}>
+                      {d}/{qs.length}
+                    </span>
+                  </div>
+                  <SBBar pct={p} color={col} height={5} />
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
 // ─── Setup Screen ─────────────────────────────────────────────────────────────
-function SetupScreen({ onSubmit }) {
-  const [deadline, setDeadline] = useState("");
+function SetupScreen({ onSubmit, savedSetup }) {
+  // No auto-selection — user must actively pick
   const [selectedCats, setSelectedCats] = useState(
-    new Set(Object.keys(ML_CATEGORY_COLORS)),
+    savedSetup ? new Set(savedSetup.selectedCats) : new Set(),
   );
+  const [deadline, setDeadline] = useState(savedSetup?.deadline || "");
 
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 1);
   const minStr = minDate.toISOString().slice(0, 10);
 
-  const daysLeft = deadline
-    ? Math.ceil((new Date(deadline) - new Date()) / 86400000)
-    : null;
-
-  const allCats = Object.keys(ML_CATEGORY_COLORS);
   const selectedTopics = ML_TOPICS.filter((t) => selectedCats.has(t.category));
-  const totalEstDays = getTotalDays(selectedTopics);
-
-  function toggleCat(cat) {
-    setSelectedCats((prev) => {
-      const n = new Set(prev);
-      if (n.has(cat)) {
-        if (n.size > 1) n.delete(cat);
-      } else n.add(cat);
-      return n;
-    });
-  }
-
+  const daysLeft = deadline
+    ? Math.max(1, Math.ceil((new Date(deadline) - new Date()) / 86400000))
+    : null;
   const qpd =
     daysLeft && selectedTopics.length
       ? Math.max(1, Math.ceil(selectedTopics.length / daysLeft))
       : null;
-
   const urgencyCol = !daysLeft
     ? "var(--txt3)"
     : daysLeft < 14
@@ -426,6 +574,23 @@ function SetupScreen({ onSubmit }) {
       : daysLeft < 45
         ? "#d4b44a"
         : "#4caf7d";
+  const canSubmit = deadline && selectedCats.size > 0;
+
+  function toggleCat(cat) {
+    setSelectedCats((prev) => {
+      const n = new Set(prev);
+      if (n.has(cat)) n.delete(cat);
+      else n.add(cat);
+      return n;
+    });
+  }
+
+  function selectAll() {
+    setSelectedCats(new Set(Object.keys(ML_CATEGORY_COLORS)));
+  }
+  function clearAll() {
+    setSelectedCats(new Set());
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -466,93 +631,180 @@ function SetupScreen({ onSubmit }) {
         </div>
         <h2
           style={{
-            fontSize: "clamp(20px,4vw,30px)",
+            fontSize: "clamp(20px,4vw,28px)",
             fontWeight: 900,
             margin: "0 0 8px",
             letterSpacing: "-.02em",
             color: "var(--txt)",
           }}
         >
-          Learn ML from scratch.
+          Learn ML — topic by topic.
           <br />
-          <span style={{ color: SB_ACCENT }}>One topic a day.</span>
+          <span style={{ color: SB_ACCENT }}>
+            Deadline keeps you consistent.
+          </span>
         </h2>
         <p style={{ fontSize: 13, color: "var(--txt3)", margin: 0 }}>
-          Curated resources for every topic — videos, articles, courses, and
-          hands-on practice.
+          Choose what you want to learn. We'll assign one topic per day with
+          curated resources.
         </p>
       </div>
 
-      {/* Categories */}
+      {/* Category picker */}
       <SBCard>
-        <Label>Choose Topics to Cover</Label>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <Label style={{ marginBottom: 0 }}>Choose Topics to Cover</Label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={selectAll}
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: SB_ACCENT,
+                background: SB_ACCENT + "15",
+                border: `1px solid ${SB_ACCENT}33`,
+                borderRadius: 6,
+                padding: "3px 9px",
+                cursor: "pointer",
+              }}
+            >
+              All
+            </button>
+            <button
+              onClick={clearAll}
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: "var(--txt3)",
+                background: "var(--bg3)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "3px 9px",
+                cursor: "pointer",
+              }}
+            >
+              None
+            </button>
+          </div>
+        </div>
         <p style={{ fontSize: 11, color: "var(--txt3)", margin: "0 0 12px" }}>
-          Select the areas you want to learn. We'll build your daily plan from
-          these.
+          Topics run from maths basics → advanced ML. Pick only what you need.
         </p>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {allCats.map((cat) => {
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {Object.keys(ML_CATEGORY_COLORS).map((cat) => {
             const col = ML_CATEGORY_COLORS[cat];
             const on = selectedCats.has(cat);
-            const count = ML_TOPICS.filter((t) => t.category === cat).length;
+            const topics = ML_TOPICS.filter((t) => t.category === cat);
+            const totalDaysEst = getTotalDays(topics);
             return (
               <button
                 key={cat}
                 onClick={() => toggleCat(cat)}
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 99,
-                  cursor: "pointer",
-                  border: `1.5px solid ${on ? col : "var(--border)"}`,
-                  background: on ? col + "18" : "var(--bg3)",
-                  color: on ? col : "var(--txt3)",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  transition: "all .15s",
                   display: "flex",
                   alignItems: "center",
-                  gap: 5,
+                  gap: 10,
+                  padding: "10px 13px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  border: `1.5px solid ${on ? col : "var(--border)"}`,
+                  background: on ? col + "12" : "var(--bg3)",
+                  transition: "all .15s",
+                  textAlign: "left",
                 }}
               >
-                {cat}
-                <span style={{ fontSize: 9, opacity: 0.7 }}>{count}</span>
+                {/* checkbox */}
+                <div
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 5,
+                    flexShrink: 0,
+                    border: `2px solid ${on ? col : "var(--border)"}`,
+                    background: on ? col : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all .15s",
+                  }}
+                >
+                  {on && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path
+                        d="M1 4L3.5 6.5L9 1"
+                        stroke="#fff"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </div>
+                {/* dot */}
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: col,
+                    flexShrink: 0,
+                  }}
+                />
+                {/* label */}
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: on ? "var(--txt)" : "var(--txt2)",
+                  }}
+                >
+                  {cat}
+                </span>
+                {/* meta */}
+                <span style={{ fontSize: 10, color: "var(--txt3)" }}>
+                  {topics.length} topics · ~{totalDaysEst}d
+                </span>
               </button>
             );
           })}
         </div>
 
-        <div
-          style={{
-            marginTop: 12,
-            padding: "8px 12px",
-            background: "var(--bg2)",
-            borderRadius: 9,
-            fontSize: 11,
-            color: "var(--txt3)",
-            display: "flex",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          <span>
-            <strong style={{ color: "var(--txt)" }}>
-              {selectedTopics.length}
-            </strong>{" "}
-            topics selected
-          </span>
-          <span>
-            <strong style={{ color: "var(--txt)" }}>~{totalEstDays}</strong>{" "}
-            total estimated days
-          </span>
-        </div>
+        {selectedTopics.length > 0 && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: "8px 12px",
+              background: SB_ACCENT + "10",
+              borderRadius: 9,
+              fontSize: 11,
+              color: SB_ACCENT,
+              fontWeight: 700,
+              border: `1px solid ${SB_ACCENT}28`,
+              display: "flex",
+              gap: 14,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{selectedTopics.length} topics selected</span>
+            <span>~{getTotalDays(selectedTopics)} estimated days total</span>
+          </div>
+        )}
       </SBCard>
 
       {/* Deadline */}
       <SBCard>
         <Label>Set Your Goal Deadline</Label>
         <p style={{ fontSize: 11, color: "var(--txt3)", margin: "0 0 10px" }}>
-          No interview — just a personal deadline to stay consistent. Pick a
-          date you want to finish by.
+          No interview pressure — just a personal target to stay on track.
         </p>
         <input
           type="date"
@@ -571,7 +823,6 @@ function SetupScreen({ onSubmit }) {
             outline: "none",
           }}
         />
-
         {daysLeft !== null && (
           <div
             style={{
@@ -601,6 +852,7 @@ function SetupScreen({ onSubmit }) {
                   to finish on time
                 </>
               )}
+              {selectedTopics.length === 0 && " · select topics first"}
             </span>
           </div>
         )}
@@ -608,7 +860,7 @@ function SetupScreen({ onSubmit }) {
 
       {/* Submit */}
       <button
-        disabled={!deadline}
+        disabled={!canSubmit}
         onClick={() => onSubmit({ deadline, selectedCats: [...selectedCats] })}
         style={{
           width: "100%",
@@ -617,181 +869,332 @@ function SetupScreen({ onSubmit }) {
           border: "none",
           fontSize: 15,
           fontWeight: 800,
-          cursor: deadline ? "pointer" : "not-allowed",
-          background: deadline
+          cursor: canSubmit ? "pointer" : "not-allowed",
+          background: canSubmit
             ? `linear-gradient(135deg, ${SB_ACCENT}, ${SB_ACCENT}bb)`
             : "var(--bg3)",
-          color: deadline ? "#fff" : "var(--txt3)",
+          color: canSubmit ? "#fff" : "var(--txt3)",
           transition: "all .2s",
         }}
       >
-        {deadline ? "Build My ML Plan →" : "Set a deadline to continue"}
+        {canSubmit
+          ? "Build My ML Plan →"
+          : !deadline
+            ? "Set a deadline to continue"
+            : "Select at least one topic"}
       </button>
     </div>
   );
 }
 
 // ─── Plan Screen ──────────────────────────────────────────────────────────────
-function PlanScreen({ setup, done, onToggleDone, onReset }) {
-  const { deadline, selectedCats } = setup;
+function PlanScreen({
+  setup,
+  done,
+  onToggleDone,
+  onReset,
+  notes,
+  onNoteChange,
+}) {
+  const { deadline, selectedCats, startDate } = setup;
 
   const selectedTopics = useMemo(
     () => ML_TOPICS.filter((t) => selectedCats.includes(t.category)),
     [selectedCats],
   );
 
+  // Build day plan — 1 topic per day sequentially
+  const dayPlan = useMemo(() => {
+    const plan = [];
+    const start = new Date(startDate);
+    selectedTopics.forEach((topic, idx) => {
+      const date = new Date(start);
+      date.setDate(date.getDate() + idx);
+      plan.push({
+        dayNum: idx + 1,
+        date: date.toISOString().split("T")[0],
+        topic,
+      });
+    });
+    return plan;
+  }, [selectedTopics, startDate]);
+
+  const totalDaysSpan = useMemo(
+    () =>
+      Math.max(
+        1,
+        Math.ceil((new Date(deadline) - new Date(startDate)) / 86400000),
+      ),
+    [deadline, startDate],
+  );
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayEntry = dayPlan.find((d) => d.date === todayStr);
   const daysLeft = Math.max(
     0,
     Math.ceil((new Date(deadline) - new Date()) / 86400000),
   );
-  const qpd = Math.max(
-    1,
-    Math.ceil(
-      selectedTopics.length /
-        Math.max(
-          1,
-          Math.ceil(
-            (new Date(deadline) - new Date(setup.startDate || deadline)) /
-              86400000,
-          ),
-        ),
-    ),
-  );
-  const dayIndex = Math.floor(Date.now() / 86400000);
-
-  // Today's topics — cycle through selectedTopics by day
-  const todayTopics = useMemo(() => {
-    if (!selectedTopics.length) return [];
-    const start = (dayIndex * qpd) % selectedTopics.length;
-    return Array.from(
-      { length: qpd },
-      (_, i) => selectedTopics[(start + i) % selectedTopics.length],
-    );
-  }, [selectedTopics, dayIndex, qpd]);
-
   const totalDone = selectedTopics.filter((t) => done[t.id]).length;
   const totalPct = selectedTopics.length
     ? Math.round((totalDone / selectedTopics.length) * 100)
     : 0;
+
+  const todayTopics = todayEntry ? [todayEntry.topic] : [];
   const todayDone = todayTopics.filter((t) => done[t.id]).length;
   const todayPct = todayTopics.length
     ? Math.round((todayDone / todayTopics.length) * 100)
     : 0;
-  const todayStr = new Date().toISOString().split("T")[0];
+
+  // streak
+  const streak = lsGet(LS_STREAK, { count: 0, lastDate: "" });
 
   const [view, setView] = useState("today");
-  const [catFilter, setCatFilter] = useState("All");
+  const [popupTopic, setPopupTopic] = useState(null);
+  const [popupIsToday, setPopupIsToday] = useState(false);
+  const [showCatPopup, setShowCatPopup] = useState(false);
 
-  // Grouped for "All Topics" view
-  const grouped = useMemo(
-    () =>
-      groupTopicsByCategory(
-        catFilter === "All"
-          ? selectedTopics
-          : selectedTopics.filter((t) => t.category === catFilter),
-      ),
-    [selectedTopics, catFilter],
-  );
+  function openPopup(topic, isToday) {
+    setPopupTopic(topic);
+    setPopupIsToday(isToday);
+  }
+
+  const urgCol =
+    daysLeft === 0
+      ? "#e05252"
+      : daysLeft < 14
+        ? "#e05252"
+        : daysLeft < 45
+          ? "#d4b44a"
+          : "#4caf7d";
+
+  // % of plan elapsed (for "you are here" indicator)
+  const startDayIdx = useMemo(() => {
+    const idx = dayPlan.findIndex((d) => d.date === todayStr);
+    return idx === -1 ? 0 : idx;
+  }, [dayPlan, todayStr]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Overview */}
-      <SBCard>
+      {/* Popups */}
+      {popupTopic && (
+        <ResourcePopup
+          topic={popupTopic}
+          done={!!done[popupTopic.id]}
+          onToggleDone={onToggleDone}
+          onClose={() => setPopupTopic(null)}
+          note={notes[popupTopic.id] || ""}
+          onNoteChange={onNoteChange}
+          showMarkDone={popupIsToday}
+        />
+      )}
+      {showCatPopup && (
+        <CategoryPopup
+          selectedTopics={selectedTopics}
+          done={done}
+          onClose={() => setShowCatPopup(false)}
+        />
+      )}
+
+      {/* ── Top stats card ── */}
+      <SBCard style={{ padding: "14px 16px" }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 12,
+            marginBottom: 10,
           }}
         >
-          <Label style={{ marginBottom: 0 }}>ML Skill Builder</Label>
-          <button
-            onClick={onReset}
-            style={{
-              fontSize: 10,
-              color: "var(--txt3)",
-              background: "var(--bg3)",
-              border: "1px solid var(--border)",
-              borderRadius: 7,
-              padding: "3px 9px",
-              cursor: "pointer",
-            }}
-          >
-            ↺ Reset
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4,1fr)",
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          {[
-            { label: "Topics", value: selectedTopics.length },
-            { label: "Completed", value: totalDone },
-            { label: "Per Day", value: qpd + "t" },
-            { label: "Days Left", value: daysLeft },
-          ].map((s) => (
-            <div
-              key={s.label}
+          <span style={{ fontSize: 13, fontWeight: 800, color: "var(--txt)" }}>
+            ML Skill Builder
+          </span>
+          <div style={{ display: "flex", gap: 6 }}>
+            {/* streak badge */}
+            {streak.count > 0 && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: "3px 9px",
+                  borderRadius: 99,
+                  background: "#e8924a18",
+                  color: "#e8924a",
+                  border: "1px solid #e8924a33",
+                }}
+              >
+                🔥 {streak.count}d streak
+              </span>
+            )}
+            <button
+              onClick={onReset}
               style={{
+                fontSize: 10,
+                color: "var(--txt3)",
                 background: "var(--bg3)",
-                borderRadius: 10,
-                padding: "16px 6px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
+                border: "1px solid var(--border)",
+                borderRadius: 7,
+                padding: "3px 9px",
+                cursor: "pointer",
               }}
             >
-              <span
-                style={{
-                  fontSize: 20,
-                  fontWeight: 900,
-                  color: "var(--txt)",
-                  lineHeight: 1,
-                }}
-              >
-                {s.value}
-              </span>
-              <span
-                style={{
-                  fontSize: 9,
-                  color: "var(--txt3)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: ".05em",
-                  textAlign: "center",
-                }}
-              >
-                {s.label}
-              </span>
-            </div>
-          ))}
+              ↺ Reset
+            </button>
+          </div>
         </div>
-        <SBBar pct={totalPct} color={SB_ACCENT} height={6} />
+
+        {/* overall progress */}
         <div
           style={{
-            fontSize: 10,
-            color: "var(--txt3)",
-            textAlign: "right",
-            marginTop: 4,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 5,
           }}
         >
-          {totalPct}% complete
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: ".08em",
+              color: "var(--txt3)",
+            }}
+          >
+            Overall Progress
+          </span>
+          <span
+            style={{
+              fontSize: 24,
+              fontWeight: 900,
+              color: SB_ACCENT,
+              lineHeight: 1,
+            }}
+          >
+            {totalPct}%
+          </span>
+        </div>
+        <SBBar pct={totalPct} color={SB_ACCENT} height={7} />
+        <div
+          style={{
+            fontSize: 11,
+            color: "var(--txt3)",
+            marginTop: 5,
+            marginBottom: 12,
+          }}
+        >
+          {totalDone} of {selectedTopics.length} topics completed ·{" "}
+          {selectedTopics.length - totalDone} remaining
+        </div>
+
+        {/* stat pills */}
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 11px",
+              borderRadius: 99,
+              background: urgCol + "12",
+              border: `1px solid ${urgCol}33`,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 800,
+                color: urgCol,
+                textTransform: "uppercase",
+                letterSpacing: ".05em",
+              }}
+            >
+              Deadline
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: urgCol }}>
+              {deadline}
+            </span>
+            <span style={{ fontSize: 10, color: urgCol, opacity: 0.8 }}>
+              · {daysLeft}d left
+            </span>
+          </div>
+
+          <button
+            onClick={() => setShowCatPopup(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              padding: "5px 11px",
+              borderRadius: 99,
+              background: SB_ACCENT + "12",
+              border: `1px solid ${SB_ACCENT}33`,
+              cursor: "pointer",
+              fontSize: 10,
+              fontWeight: 800,
+              color: SB_ACCENT,
+            }}
+          >
+            By Category ↗
+          </button>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              padding: "5px 11px",
+              borderRadius: 99,
+              background: "var(--bg3)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: "var(--txt3)",
+                textTransform: "uppercase",
+                letterSpacing: ".05em",
+              }}
+            >
+              Pace
+            </span>
+            <span
+              style={{ fontSize: 11, fontWeight: 800, color: "var(--txt)" }}
+            >
+              1 topic/day
+            </span>
+          </div>
+
+          {/* jump to today button */}
+          {view === "all" && (
+            <button
+              onClick={() => setView("today")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "5px 11px",
+                borderRadius: 99,
+                background: "#4caf7d12",
+                border: "1px solid #4caf7d33",
+                cursor: "pointer",
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#4caf7d",
+              }}
+            >
+              Jump to Today ↓
+            </button>
+          )}
         </div>
       </SBCard>
 
-      {/* View tabs */}
+      {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: 6 }}>
         {[
           { id: "today", label: "📅 Today" },
           { id: "all", label: "📚 All Topics" },
-          { id: "progress", label: "📊 Progress" },
         ].map((v) => (
           <button
             key={v.id}
@@ -814,7 +1217,7 @@ function PlanScreen({ setup, done, onToggleDone, onReset }) {
         ))}
       </div>
 
-      {/* ══ TODAY ══ */}
+      {/* ════ TODAY ════ */}
       {view === "today" && (
         <SBCard>
           <div
@@ -826,12 +1229,21 @@ function PlanScreen({ setup, done, onToggleDone, onReset }) {
             }}
           >
             <div>
-              <Label style={{ marginBottom: 0 }}>Today's Topics</Label>
-              <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 2 }}>
-                {todayStr} ·{" "}
-                <span style={{ color: SB_ACCENT, fontWeight: 700 }}>
-                  {todayDone}/{todayTopics.length} done
-                </span>
+              <Label style={{ marginBottom: 2 }}>
+                {todayEntry
+                  ? `Day ${todayEntry.dayNum} — ${todayStr}`
+                  : todayStr}
+              </Label>
+              <div style={{ fontSize: 11, color: "var(--txt3)" }}>
+                {todayTopics.length > 0 ? (
+                  <>
+                    <span style={{ color: SB_ACCENT, fontWeight: 700 }}>
+                      {todayDone}/{todayTopics.length} done
+                    </span>
+                  </>
+                ) : (
+                  <span>No topic scheduled today — check All Topics</span>
+                )}
               </div>
             </div>
             <div
@@ -863,10 +1275,11 @@ function PlanScreen({ setup, done, onToggleDone, onReset }) {
                 textAlign: "center",
               }}
             >
-              🎉 All topics studied today — keep the streak going!
+              🎉 Today's topic done — keep the streak going!
             </div>
           )}
 
+          {/* today topics */}
           <div
             style={{
               marginTop: 14,
@@ -875,268 +1288,193 @@ function PlanScreen({ setup, done, onToggleDone, onReset }) {
               gap: 8,
             }}
           >
-            {todayTopics.map((t, i) => (
-              <TopicRow
-                key={t.id}
-                topic={t}
-                done={!!done[t.id]}
-                onToggleDone={onToggleDone}
-                dayNum={null}
-              />
-            ))}
-          </div>
-
-          {/* hint */}
-          <div
-            style={{
-              marginTop: 12,
-              padding: "8px 12px",
-              background: "var(--bg3)",
-              borderRadius: 10,
-              fontSize: 11,
-              color: "var(--txt3)",
-              lineHeight: 1.5,
-            }}
-          >
-            <span style={{ fontWeight: 700, color: "var(--txt2)" }}>Tip: </span>
-            Click any topic to expand and see curated study resources. Mark it
-            done after you've studied it.
-          </div>
-        </SBCard>
-      )}
-
-      {/* ══ ALL TOPICS ══ */}
-      {view === "all" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* category filter */}
-          <div
-            style={{
-              display: "flex",
-              gap: 5,
-              overflowX: "auto",
-              paddingBottom: 4,
-              scrollbarWidth: "none",
-            }}
-          >
-            {["All", ...selectedCats].map((c) => {
-              const col = ML_CATEGORY_COLORS[c] || SB_ACCENT;
-              const qs =
-                c === "All"
-                  ? selectedTopics
-                  : selectedTopics.filter((t) => t.category === c);
-              const doneCount = qs.filter((t) => done[t.id]).length;
-              const isOn = catFilter === c;
-              return (
-                <button
-                  key={c}
-                  onClick={() => setCatFilter(c)}
-                  style={{
-                    flexShrink: 0,
-                    padding: "5px 11px",
-                    borderRadius: 99,
-                    cursor: "pointer",
-                    border: `1.5px solid ${isOn ? col : "var(--border)"}`,
-                    background: isOn ? col + "18" : "var(--bg3)",
-                    color: isOn ? col : "var(--txt3)",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {c} {doneCount}/{qs.length}
-                </button>
-              );
-            })}
-          </div>
-
-          {Object.entries(grouped).map(([cat, topics]) => {
-            const col = ML_CATEGORY_COLORS[cat] || "#888";
-            const catDone = topics.filter((t) => done[t.id]).length;
-            const pct = topics.length
-              ? Math.round((catDone / topics.length) * 100)
-              : 0;
-            const barCol =
-              pct < 40 ? "#e05252" : pct > 70 ? "#4caf7d" : "#d4b44a";
-            return (
-              <SBCard key={cat} style={{ padding: "12px 14px" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 8,
-                  }}
-                >
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        background: col,
-                        display: "inline-block",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 800,
-                        color: "var(--txt)",
-                      }}
-                    >
-                      {cat}
-                    </span>
-                    <span style={{ fontSize: 10, color: "var(--txt3)" }}>
-                      {topics.length} topics
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: barCol,
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {catDone}/{topics.length}
-                  </span>
-                </div>
-                <SBBar pct={pct} color={col} height={4} />
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 7,
-                    marginTop: 10,
-                  }}
-                >
-                  {topics.map((t) => (
-                    <TopicRow
-                      key={t.id}
-                      topic={t}
-                      done={!!done[t.id]}
-                      onToggleDone={onToggleDone}
-                    />
-                  ))}
-                </div>
-              </SBCard>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ══ PROGRESS ══ */}
-      {view === "progress" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* overall */}
-          <SBCard>
-            <Label>Overall Progress</Label>
-            <div
-              style={{
-                fontSize: 32,
-                fontWeight: 900,
-                color: SB_ACCENT,
-                marginBottom: 6,
-              }}
-            >
-              {totalPct}%
-            </div>
-            <SBBar pct={totalPct} color={SB_ACCENT} height={8} />
-            <div style={{ fontSize: 11, color: "var(--txt3)", marginTop: 6 }}>
-              {totalDone} of {selectedTopics.length} topics completed ·{" "}
-              {selectedTopics.length - totalDone} remaining
-            </div>
-          </SBCard>
-
-          {/* level breakdown */}
-          <SBCard>
-            <Label>By Difficulty Level</Label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3,1fr)",
-                gap: 8,
-              }}
-            >
-              {[
-                ["beginner", "#4caf7d", "Beginner"],
-                ["intermediate", "#d4b44a", "Intermediate"],
-                ["advanced", "#e05252", "Advanced"],
-              ].map(([lvl, col, label]) => {
-                const qs = selectedTopics.filter((t) => t.level === lvl);
-                const d = qs.filter((t) => done[t.id]).length;
-                const p = qs.length ? Math.round((d / qs.length) * 100) : 0;
+            {todayTopics.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  color: "var(--txt3)",
+                  fontSize: 13,
+                  padding: 24,
+                }}
+              >
+                No topic scheduled for today.
+                <br />
+                <span style={{ fontSize: 11, marginTop: 4, display: "block" }}>
+                  Your plan starts on {dayPlan[0]?.date || "—"}
+                </span>
+              </div>
+            ) : (
+              todayTopics.map((t) => {
+                const col = ML_CATEGORY_COLORS[t.category] || SB_ACCENT;
+                const isDone = !!done[t.id];
+                const hasNote = !!notes[t.id]?.trim();
                 return (
                   <div
-                    key={lvl}
+                    key={t.id}
+                    onClick={() => openPopup(t, true)}
                     style={{
-                      background: "var(--bg3)",
-                      borderRadius: 10,
-                      padding: "12px 10px",
                       display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 5,
+                      alignItems: "flex-start",
+                      gap: 10,
+                      padding: "12px 13px",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      background: isDone ? col + "10" : "var(--bg3)",
+                      border: `1px solid ${isDone ? col + "44" : "var(--border)"}`,
+                      transition: "all .15s",
                     }}
                   >
-                    <span style={{ fontSize: 16, fontWeight: 900, color: col }}>
-                      {d}/{qs.length}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 9,
-                        fontWeight: 700,
-                        color: "var(--txt3)",
-                        textTransform: "uppercase",
-                        letterSpacing: ".05em",
-                      }}
-                    >
-                      {label}
-                    </span>
-                    <div style={{ width: "100%" }}>
-                      <SBBar pct={p} color={col} height={4} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </SBCard>
-
-          {/* per category */}
-          <SBCard>
-            <Label>By Category</Label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {selectedCats.map((cat) => {
-                const col = ML_CATEGORY_COLORS[cat] || "#888";
-                const qs = selectedTopics.filter((t) => t.category === cat);
-                const d = qs.filter((t) => done[t.id]).length;
-                const p = qs.length ? Math.round((d / qs.length) * 100) : 0;
-                return (
-                  <div key={cat}>
                     <div
                       style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 5,
+                        flexShrink: 0,
+                        marginTop: 2,
+                        border: `2px solid ${isDone ? col : "var(--border)"}`,
+                        background: isDone ? col + "22" : "transparent",
                         display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 4,
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
+                      {isDone && (
+                        <svg
+                          width="10"
+                          height="8"
+                          viewBox="0 0 10 8"
+                          fill="none"
+                        >
+                          <path
+                            d="M1 4L3.5 6.5L9 1"
+                            stroke={col}
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            opacity="0.8"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: isDone ? "var(--txt3)" : "var(--txt)",
+                          textDecoration: isDone ? "line-through" : "none",
+                          lineHeight: 1.35,
+                          marginBottom: 4,
+                        }}
+                      >
+                        {t.title}
+                      </div>
                       <div
                         style={{
                           display: "flex",
+                          gap: 5,
+                          flexWrap: "wrap",
                           alignItems: "center",
-                          gap: 6,
                         }}
                       >
                         <span
                           style={{
-                            width: 8,
-                            height: 8,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            padding: "2px 7px",
+                            borderRadius: 99,
+                            background: col + "18",
+                            color: col,
+                            border: `1px solid ${col}33`,
+                          }}
+                        >
+                          {t.category}
+                        </span>
+                        <span style={{ fontSize: 10, color: "var(--txt3)" }}>
+                          ~{t.estimatedDays}d · {t.resources.length} resources
+                        </span>
+                        {hasNote && (
+                          <span
+                            style={{
+                              fontSize: 9,
+                              color: "#d4b44a",
+                              fontWeight: 700,
+                            }}
+                          >
+                            📝 note
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: SB_ACCENT,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        background: SB_ACCENT + "15",
+                        border: `1px solid ${SB_ACCENT}33`,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Study ↗
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* upcoming preview */}
+          {dayPlan.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <Label>Coming Up Next</Label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {dayPlan
+                  .filter((d) => d.date > todayStr)
+                  .slice(0, 3)
+                  .map((d) => {
+                    const col =
+                      ML_CATEGORY_COLORS[d.topic.category] || SB_ACCENT;
+                    return (
+                      <div
+                        key={d.dayNum}
+                        onClick={() => openPopup(d.topic, false)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "8px 11px",
+                          borderRadius: 10,
+                          background: "var(--bg3)",
+                          border: "1px solid var(--border)",
+                          cursor: "pointer",
+                          opacity: 0.75,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 800,
+                            color: SB_ACCENT,
+                            background: SB_ACCENT + "15",
+                            border: `1px solid ${SB_ACCENT}28`,
+                            padding: "2px 7px",
+                            borderRadius: 99,
+                            flexShrink: 0,
+                          }}
+                        >
+                          Day {d.dayNum}
+                        </span>
+                        <span
+                          style={{
+                            width: 7,
+                            height: 7,
                             borderRadius: "50%",
                             background: col,
-                            display: "inline-block",
+                            flexShrink: 0,
                           }}
                         />
                         <span
@@ -1144,79 +1482,338 @@ function PlanScreen({ setup, done, onToggleDone, onReset }) {
                             fontSize: 12,
                             fontWeight: 600,
                             color: "var(--txt2)",
+                            flex: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          {cat}
+                          {d.topic.title}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            color: "var(--txt3)",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {d.date}
                         </span>
                       </div>
-                      <span
-                        style={{ fontSize: 11, fontWeight: 700, color: col }}
-                      >
-                        {d}/{qs.length}
-                      </span>
-                    </div>
-                    <SBBar pct={p} color={col} height={5} />
-                  </div>
-                );
-              })}
+                    );
+                  })}
+              </div>
             </div>
-          </SBCard>
+          )}
 
-          {/* deadline info */}
-          <SBCard>
-            <Label>Deadline</Label>
-            <div
-              style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 6 }}
-            >
-              Goal: <strong style={{ color: "var(--txt)" }}>{deadline}</strong>
-            </div>
-            <div
-              style={{ fontSize: 12, color: "var(--txt3)", lineHeight: 1.6 }}
-            >
-              {daysLeft > 0 ? (
-                <>
-                  {daysLeft} days remaining · studying{" "}
-                  <strong style={{ color: SB_ACCENT }}>
-                    {qpd} topic{qpd !== 1 ? "s" : ""}/day
-                  </strong>{" "}
-                  keeps you on track
-                </>
-              ) : (
-                <span style={{ color: "#e05252" }}>
-                  Deadline passed — reset to set a new goal
+          <div
+            style={{
+              marginTop: 10,
+              padding: "8px 12px",
+              background: "var(--bg3)",
+              borderRadius: 10,
+              fontSize: 11,
+              color: "var(--txt3)",
+            }}
+          >
+            <span style={{ fontWeight: 700, color: "var(--txt2)" }}>Tip: </span>
+            Tap the topic to open resources, write notes, and mark it done.
+          </div>
+        </SBCard>
+      )}
+
+      {/* ════ ALL TOPICS — day-wise, no mark done ════ */}
+      {view === "all" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* legend */}
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              padding: "4px 2px",
+            }}
+          >
+            {[
+              [SB_ACCENT, "Today"],
+              ["#4caf7d", "Completed"],
+              ["#d4b44a", "Past · Missed"],
+              ["var(--txt3)", "Upcoming"],
+            ].map(([col, label]) => (
+              <div
+                key={label}
+                style={{ display: "flex", alignItems: "center", gap: 4 }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: col,
+                    display: "inline-block",
+                  }}
+                />
+                <span style={{ fontSize: 10, color: "var(--txt3)" }}>
+                  {label}
                 </span>
-              )}
-            </div>
-          </SBCard>
+              </div>
+            ))}
+          </div>
+
+          {dayPlan.map((day) => {
+            const isToday = day.date === todayStr;
+            const isPast = day.date < todayStr;
+            const isFuture = day.date > todayStr;
+            const isDone = !!done[day.topic.id];
+            const hasNote = !!notes[day.topic.id]?.trim();
+            const col = ML_CATEGORY_COLORS[day.topic.category] || SB_ACCENT;
+
+            // day card border & tint
+            const cardBorder = isToday
+              ? `1.5px solid ${SB_ACCENT}55`
+              : isDone
+                ? `1px solid #4caf7d33`
+                : isPast
+                  ? `1px solid #d4b44a22`
+                  : "1px solid var(--border)";
+            const cardBg = isToday
+              ? SB_ACCENT + "06"
+              : isDone
+                ? "#4caf7d06"
+                : "var(--bg3)";
+
+            // day num pill colour
+            const pillCol = isToday
+              ? SB_ACCENT
+              : isDone
+                ? "#4caf7d"
+                : isPast
+                  ? "#d4b44a"
+                  : "var(--txt3)";
+            const pillBg = isToday
+              ? SB_ACCENT + "18"
+              : isDone
+                ? "#4caf7d12"
+                : isPast
+                  ? "#d4b44a0e"
+                  : "var(--bg2)";
+
+            return (
+              <div
+                key={day.dayNum}
+                onClick={() => openPopup(day.topic, isToday)}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 11,
+                  padding: "11px 13px",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  background: cardBg,
+                  border: cardBorder,
+                  opacity: isFuture ? 0.78 : 1,
+                  transition: "all .15s",
+                }}
+              >
+                {/* day num pill (left) */}
+                <div
+                  style={{
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 3,
+                    minWidth: 44,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 900,
+                      padding: "3px 8px",
+                      borderRadius: 99,
+                      background: pillBg,
+                      color: pillCol,
+                      border: `1px solid ${pillCol}33`,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Day {day.dayNum}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: "var(--txt3)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {day.date}
+                  </span>
+                  {isToday && (
+                    <span
+                      style={{
+                        fontSize: 8,
+                        fontWeight: 800,
+                        color: SB_ACCENT,
+                        textTransform: "uppercase",
+                        letterSpacing: ".06em",
+                      }}
+                    >
+                      Today
+                    </span>
+                  )}
+                </div>
+
+                {/* topic info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: isDone ? "var(--txt3)" : "var(--txt)",
+                      textDecoration: isDone ? "line-through" : "none",
+                      lineHeight: 1.35,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {day.topic.title}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 5,
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        borderRadius: 99,
+                        background: col + "18",
+                        color: col,
+                        border: `1px solid ${col}33`,
+                      }}
+                    >
+                      {day.topic.category}
+                    </span>
+                    <span style={{ fontSize: 9, color: "var(--txt3)" }}>
+                      {day.topic.resources.length} resources
+                    </span>
+                    {hasNote && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          color: "#d4b44a",
+                          fontWeight: 700,
+                        }}
+                      >
+                        📝
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* right side indicator */}
+                <div
+                  style={{
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {isDone ? (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "#4caf7d",
+                        fontWeight: 800,
+                      }}
+                    >
+                      ✓
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        color: "var(--txt3)",
+                        padding: "2px 7px",
+                        borderRadius: 6,
+                        background: "var(--bg2)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      View ↗
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-// ─── SkillBuilder root ────────────────────────────────────────────────────────
+// ─── Root — handles localStorage persistence ──────────────────────────────────
 export default function SkillBuilder() {
-  // completely independent state from HireLab
-  const [setup, setSetup] = useState(null); // null = show setup screen
-  const [done, setDone] = useState({}); // { [topicId]: true }
+  const [setup, setSetup] = useState(() => lsGet(LS_SETUP, null));
+  const [done, setDone] = useState(() => lsGet(LS_DONE, {}));
+  const [notes, setNotes] = useState(() => lsGet(LS_NOTES, {}));
+
+  // persist setup
+  useEffect(() => {
+    lsSet(LS_SETUP, setup);
+  }, [setup]);
+  // persist done
+  useEffect(() => {
+    lsSet(LS_DONE, done);
+  }, [done]);
+  // persist notes
+  useEffect(() => {
+    lsSet(LS_NOTES, notes);
+  }, [notes]);
 
   function handleSetup(data) {
-    setSetup({ ...data, startDate: new Date().toISOString().split("T")[0] });
-    setDone({});
+    const s = { ...data, startDate: new Date().toISOString().split("T")[0] };
+    setSetup(s);
+    // don't wipe done/notes on re-setup so progress isn't lost on minor changes
   }
 
   function handleToggleDone(topicId) {
-    setDone((prev) => ({ ...prev, [topicId]: !prev[topicId] }));
+    setDone((prev) => {
+      const next = { ...prev, [topicId]: !prev[topicId] };
+      // update streak whenever a topic is marked done
+      if (next[topicId]) updateStreak(new Date().toISOString().split("T")[0]);
+      return next;
+    });
+  }
+
+  function handleNoteChange(topicId, text) {
+    setNotes((prev) => {
+      const next = { ...prev, [topicId]: text };
+      lsSet(LS_NOTES, next);
+      return next;
+    });
   }
 
   function handleReset() {
     setSetup(null);
     setDone({});
+    setNotes({});
+    lsSet(LS_SETUP, null);
+    lsSet(LS_DONE, {});
+    lsSet(LS_NOTES, {});
+    lsSet(LS_STREAK, { count: 0, lastDate: "" });
   }
 
-  if (!setup) {
-    return <SetupScreen onSubmit={handleSetup} />;
-  }
+  if (!setup)
+    return (
+      <SetupScreen onSubmit={handleSetup} savedSetup={lsGet(LS_SETUP, null)} />
+    );
 
   return (
     <PlanScreen
@@ -1224,6 +1821,8 @@ export default function SkillBuilder() {
       done={done}
       onToggleDone={handleToggleDone}
       onReset={handleReset}
+      notes={notes}
+      onNoteChange={handleNoteChange}
     />
   );
 }
