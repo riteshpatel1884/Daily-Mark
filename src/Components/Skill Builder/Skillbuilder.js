@@ -41,7 +41,7 @@ function updateStreak(todayStr) {
   return next;
 }
 
-// ─── primitives ───────────────────────────────────────────────────────────────
+
 function SBBar({ pct, color = SB_ACCENT, height = 5 }) {
   return (
     <div
