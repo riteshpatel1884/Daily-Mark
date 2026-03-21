@@ -89,7 +89,7 @@ function Label({ children, style = {} }) {
   );
 }
 
-// ─── Resource chip 
+//  Resource chip 
 function ResourceChip({ r }) {
   const meta = RESOURCE_TYPE_META[r.type] || {
     label: r.type,
